@@ -35,3 +35,7 @@ body {
 .news-card-topics .mdc-evolution-chip-set__chips {
   gap: 4px;
 }
+
+.news-filter-field .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}

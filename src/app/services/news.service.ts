@@ -4,6 +4,11 @@ import { NewsArticle } from '../models/news-article.model';
 
 type ArticleSeed = Omit<NewsArticle, 'topics'>;
 
+export interface NewsFilter {
+  searchQuery: string;
+  topics: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class NewsService {
   private readonly topicsByArticleId: Record<number, string[]> = {
@@ -408,17 +413,47 @@ export class NewsService {
     },
   ];
 
-  getArticles(page: number, pageSize: number): Observable<NewsArticle[]> {
+  getArticles(filter: NewsFilter, page: number, pageSize: number): Observable<NewsArticle[]> {
+    const filtered = this.getFilteredArticles(filter);
     const start = page * pageSize;
-    const end = start + pageSize;
-    const slice = this.articles.slice(start, end).map((article) => ({
-      ...article,
-      topics: this.topicsByArticleId[article.id] ?? [],
-    }));
+    const slice = filtered.slice(start, start + pageSize);
     return of(slice).pipe(delay(600));
   }
 
-  getTotalCount(): number {
-    return this.articles.length;
+  getFilteredCount(filter: NewsFilter): number {
+    return this.getFilteredArticles(filter).length;
+  }
+
+  getAllTopics(): string[] {
+    const topics = new Set<string>();
+    for (const articleTopics of Object.values(this.topicsByArticleId)) {
+      for (const topic of articleTopics) {
+        topics.add(topic);
+      }
+    }
+    return [...topics].sort((a, b) => a.localeCompare(b));
+  }
+
+  private getFilteredArticles(filter: NewsFilter): NewsArticle[] {
+    const query = filter.searchQuery.trim().toLowerCase();
+    const selectedTopics = filter.topics;
+
+    return this.articles
+      .map((article) => this.enrichArticle(article))
+      .filter((article) => {
+        const matchesSearch =
+          query.length === 0 || article.title.toLowerCase().includes(query);
+        const matchesTopics =
+          selectedTopics.length === 0 ||
+          selectedTopics.some((topic) => article.topics.includes(topic));
+        return matchesSearch && matchesTopics;
+      });
+  }
+
+  private enrichArticle(article: ArticleSeed): NewsArticle {
+    return {
+      ...article,
+      topics: this.topicsByArticleId[article.id] ?? [],
+    };
   }
 }

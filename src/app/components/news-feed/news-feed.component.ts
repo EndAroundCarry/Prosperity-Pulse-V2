@@ -7,22 +7,32 @@ import {
   inject,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import { NewsArticle } from '../../models/news-article.model';
-import { NewsService } from '../../services/news.service';
+import { NewsFilter, NewsService } from '../../services/news.service';
 import { NewsDetailDialogComponent } from '../news-detail-dialog/news-detail-dialog.component';
 
 @Component({
   selector: 'app-news-feed',
   imports: [
     DatePipe,
+    FormsModule,
     MatCardModule,
     MatChipsModule,
     MatDialogModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
     MatProgressSpinnerModule,
+    MatSelectModule,
   ],
   templateUrl: './news-feed.component.html',
 })
@@ -32,12 +42,19 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy {
   private readonly newsService = inject(NewsService);
   private readonly dialog = inject(MatDialog);
   private observer: IntersectionObserver | null = null;
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly pageSize = 12;
+  readonly allTopics = this.newsService.getAllTopics();
+
   articles: NewsArticle[] = [];
   currentPage = 0;
   loading = false;
   hasMore = true;
+
+  searchQuery = '';
+  selectedTopics: string[] = [];
+  private activeFilter: NewsFilter = { searchQuery: '', topics: [] };
 
   ngAfterViewInit(): void {
     this.loadMore();
@@ -46,6 +63,23 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.observer?.disconnect();
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+  }
+
+  onSearchInput(): void {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+
+    this.searchDebounceTimer = setTimeout(() => {
+      this.applyFilter({ searchQuery: this.searchQuery, topics: this.activeFilter.topics });
+    }, 300);
+  }
+
+  onTopicFilterClosed(): void {
+    this.applyFilter({ searchQuery: this.activeFilter.searchQuery, topics: this.selectedTopics });
   }
 
   openArticle(article: NewsArticle): void {
@@ -64,6 +98,13 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy {
     return text.slice(0, maxLength).trimEnd() + '…';
   }
 
+  get hasActiveFilters(): boolean {
+    return (
+      this.activeFilter.searchQuery.trim().length > 0 ||
+      this.activeFilter.topics.length > 0
+    );
+  }
+
   private setupInfiniteScroll(): void {
     this.observer = new IntersectionObserver(
       (entries) => {
@@ -77,17 +118,43 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy {
     this.observer.observe(this.scrollSentinel.nativeElement);
   }
 
+  private applyFilter(filter: NewsFilter): void {
+    const normalizedFilter: NewsFilter = {
+      searchQuery: filter.searchQuery.trim(),
+      topics: [...filter.topics],
+    };
+
+    const unchanged =
+      normalizedFilter.searchQuery === this.activeFilter.searchQuery &&
+      normalizedFilter.topics.length === this.activeFilter.topics.length &&
+      normalizedFilter.topics.every((topic) => this.activeFilter.topics.includes(topic));
+
+    if (unchanged) {
+      return;
+    }
+
+    this.activeFilter = normalizedFilter;
+    this.resetFeed();
+    this.loadMore();
+  }
+
+  private resetFeed(): void {
+    this.articles = [];
+    this.currentPage = 0;
+    this.hasMore = true;
+  }
+
   private loadMore(): void {
     if (this.loading || !this.hasMore) {
       return;
     }
 
     this.loading = true;
-    this.newsService.getArticles(this.currentPage, this.pageSize).subscribe({
+    this.newsService.getArticles(this.activeFilter, this.currentPage, this.pageSize).subscribe({
       next: (articles) => {
         this.articles = [...this.articles, ...articles];
         this.currentPage++;
-        this.hasMore = this.articles.length < this.newsService.getTotalCount();
+        this.hasMore = this.articles.length < this.newsService.getFilteredCount(this.activeFilter);
         this.loading = false;
       },
       error: () => {

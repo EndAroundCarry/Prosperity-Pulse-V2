@@ -6,6 +6,44 @@
     </p>
   </header>
 
+  <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
+    <mat-form-field appearance="outline" class="news-filter-field flex-1 w-full">
+      <mat-label>Search by title</mat-label>
+      <mat-icon matPrefix class="!mr-2 text-slate-400">search</mat-icon>
+      <input
+        matInput
+        type="search"
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchInput()"
+        placeholder="e.g. Federal Reserve, Bitcoin, housing"
+        aria-label="Search articles by title"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="news-filter-field w-full sm:w-72 shrink-0">
+      <mat-label>Filter by topic</mat-label>
+      <mat-select
+        multiple
+        [(ngModel)]="selectedTopics"
+        (closed)="onTopicFilterClosed()"
+        placeholder="All topics"
+        aria-label="Filter articles by topic"
+      >
+        @for (topic of allTopics; track topic) {
+          <mat-option [value]="topic">{{ topic }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  @if (hasActiveFilters && !loading && articles.length === 0) {
+    <div class="text-center py-16 px-4">
+      <mat-icon class="!text-5xl !w-12 !h-12 text-slate-300 mb-3">search_off</mat-icon>
+      <p class="text-slate-600 font-medium">No articles match your filters</p>
+      <p class="text-slate-400 text-sm mt-1">Try a different keyword or topic selection</p>
+    </div>
+  }
+
   <div
     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6"
   >
@@ -66,7 +104,11 @@
 
   @if (!hasMore && articles.length > 0) {
     <p class="text-center text-slate-400 text-sm py-8">
-      You&apos;ve reached the end of the feed
+      @if (hasActiveFilters) {
+        You&apos;ve seen all matching articles
+      } @else {
+        You&apos;ve reached the end of the feed
+      }
     </p>
   }
 </section>
