@@ -1,0 +1,37 @@
+<div class="flex flex-col max-h-[85vh]">
+  <div class="relative shrink-0">
+    <img
+      [src]="article.imageUrl"
+      [alt]="article.title"
+      class="w-full h-48 sm:h-56 object-cover"
+    />
+    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+    <div class="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
+      <span class="inline-block px-2 py-0.5 text-xs font-medium bg-blue-600 text-white rounded mb-2">
+        {{ article.sourceName }}
+      </span>
+      <h2 class="text-xl sm:text-2xl font-bold text-white leading-snug">
+        {{ article.title }}
+      </h2>
+    </div>
+  </div>
+
+  <mat-dialog-content class="!px-4 sm:!px-6 !py-4 overflow-y-auto">
+    <p class="text-sm text-slate-500 mb-3">
+      {{ article.publishedAt | date: 'medium' }}
+    </p>
+    <p class="text-base text-slate-700 leading-relaxed">
+      {{ article.summary }}
+    </p>
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="!px-4 sm:!px-6 !py-4 !border-t !border-slate-200 flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+    <button mat-stroked-button class="w-full sm:w-auto" (click)="close()">
+      Close
+    </button>
+    <button mat-flat-button color="primary" class="w-full sm:w-auto" (click)="readMore()">
+      <mat-icon class="mr-1">open_in_new</mat-icon>
+      Read more
+    </button>
+  </mat-dialog-actions>
+</div>
