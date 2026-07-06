@@ -38,6 +38,12 @@
           </mat-card-title>
         </mat-card-header>
 
+        <mat-chip-set class="news-card-topics !px-4 !pt-2 !pb-0" aria-label="Article categories">
+          @for (topic of article.topics; track topic) {
+            <mat-chip>{{ topic }}</mat-chip>
+          }
+        </mat-chip-set>
+
         <mat-card-content class="!px-4 !pt-2 !pb-4 flex-1">
           <p class="text-sm text-slate-600 line-clamp-3 leading-relaxed">
             {{ truncateSummary(article.summary) }}

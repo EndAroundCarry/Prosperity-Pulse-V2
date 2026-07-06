@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { NewsArticle } from '../../models/news-article.model';
@@ -19,6 +20,7 @@ import { NewsDetailDialogComponent } from '../news-detail-dialog/news-detail-dia
   imports: [
     DatePipe,
     MatCardModule,
+    MatChipsModule,
     MatDialogModule,
     MatProgressSpinnerModule,
   ],

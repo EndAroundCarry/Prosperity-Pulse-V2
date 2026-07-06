@@ -6,4 +6,5 @@ export interface NewsArticle {
   sourceUrl: string;
   sourceName: string;
   publishedAt: string;
+  topics: string[];
 }

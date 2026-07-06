@@ -26,3 +26,12 @@ body {
 .news-detail-dialog .mat-mdc-dialog-content {
   max-height: none;
 }
+
+.news-card-topics .mat-mdc-chip {
+  --mdc-chip-container-height: 24px;
+  font-size: 0.7rem;
+}
+
+.news-card-topics .mdc-evolution-chip-set__chips {
+  gap: 4px;
+}

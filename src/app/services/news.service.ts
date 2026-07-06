@@ -2,9 +2,50 @@ import { Injectable } from '@angular/core';
 import { delay, Observable, of } from 'rxjs';
 import { NewsArticle } from '../models/news-article.model';
 
+type ArticleSeed = Omit<NewsArticle, 'topics'>;
+
 @Injectable({ providedIn: 'root' })
 export class NewsService {
-  private readonly articles: NewsArticle[] = [
+  private readonly topicsByArticleId: Record<number, string[]> = {
+    1: ['Monetary Policy', 'Fed', 'Markets'],
+    2: ['Technology', 'AI', 'Equities'],
+    3: ['Energy', 'Commodities', 'OPEC'],
+    4: ['Central Banks', 'Europe', 'Monetary Policy'],
+    5: ['Crypto', 'Bitcoin', 'ETFs'],
+    6: ['Real Estate', 'Housing', 'Economy'],
+    7: ['Commodities', 'Gold', 'Safe Haven'],
+    8: ['Retail', 'Consumer', 'Economy'],
+    9: ['Emerging Markets', 'Global', 'Equities'],
+    10: ['Banking', 'Earnings', 'Finance'],
+    11: ['Asia', 'Equities', 'Markets'],
+    12: ['ESG', 'Bonds', 'Green Finance'],
+    13: ['Labor', 'Economy', 'Fed'],
+    14: ['Semiconductors', 'Technology', 'AI'],
+    15: ['Forex', 'Trade', 'Dollar'],
+    16: ['Private Equity', 'M&A', 'Deals'],
+    17: ['Asia', 'China', 'Stimulus'],
+    18: ['Inflation', 'Economy', 'Fed'],
+    19: ['Insurance', 'Climate', 'ESG'],
+    20: ['Fintech', 'Venture Capital', 'Startups'],
+    21: ['Bonds', 'Treasury', 'Rates'],
+    22: ['Luxury', 'Retail', 'China'],
+    23: ['Renewable Energy', 'ESG', 'Energy'],
+    24: ['Personal Finance', 'Credit', 'Banking'],
+    25: ['IPOs', 'Markets', 'Deals'],
+    26: ['Mortgages', 'Real Estate', 'Rates'],
+    27: ['Automotive', 'EV', 'Manufacturing'],
+    28: ['Small Cap', 'Equities', 'Markets'],
+    29: ['Gold', 'Central Banks', 'Commodities'],
+    30: ['Consumer', 'Economy', 'Sentiment'],
+    31: ['Cybersecurity', 'Banking', 'Technology'],
+    32: ['Dividends', 'Investing', 'Equities'],
+    33: ['Logistics', 'Trade', 'Supply Chain'],
+    34: ['REITs', 'Real Estate', 'Rates'],
+    35: ['Emerging Markets', 'India', 'GDP'],
+    36: ['Crypto', 'Regulation', 'Stablecoins'],
+  };
+
+  private readonly articles: ArticleSeed[] = [
     {
       id: 1,
       title: 'Federal Reserve Signals Potential Rate Cut in Q3',
@@ -370,7 +411,10 @@ export class NewsService {
   getArticles(page: number, pageSize: number): Observable<NewsArticle[]> {
     const start = page * pageSize;
     const end = start + pageSize;
-    const slice = this.articles.slice(start, end);
+    const slice = this.articles.slice(start, end).map((article) => ({
+      ...article,
+      topics: this.topicsByArticleId[article.id] ?? [],
+    }));
     return of(slice).pipe(delay(600));
   }
 
