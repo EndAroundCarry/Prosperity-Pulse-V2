@@ -163,16 +163,34 @@ export class NewsService {
       return '';
     }
 
-    const datePart = timePublished.slice(0, 8);
-    const timePart = timePublished.slice(8, 14);
-    const year = datePart.slice(0, 4);
-    const month = datePart.slice(4, 6);
-    const day = datePart.slice(6, 8);
-    const hour = timePart.slice(0, 2);
-    const minute = timePart.slice(2, 4);
-    const second = timePart.slice(4, 6);
+    const normalized = timePublished.trim();
+    const compactValue = normalized.replace(/[-:T/Z\s]/g, '');
+    const compactMatch = compactValue.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/);
 
-    return `${year}-${month}-${day}T${hour}:${minute}:${second}Z`;
+    if (compactMatch) {
+      const [, year, month, day, hour, minute, second] = compactMatch;
+      const parsedYear = Number(year);
+      const parsedMonth = Number(month);
+      const parsedDay = Number(day);
+      const parsedHour = Number(hour);
+      const parsedMinute = Number(minute);
+      const parsedSecond = Number(second);
+
+      if (
+        parsedMonth < 1 || parsedMonth > 12 ||
+        parsedDay < 1 || parsedDay > 31 ||
+        parsedHour < 0 || parsedHour > 23 ||
+        parsedMinute < 0 || parsedMinute > 59 ||
+        parsedSecond < 0 || parsedSecond > 59
+      ) {
+        return '';
+      }
+
+      return `${year}-${month}-${day}T${hour}:${minute}:${second}Z`;
+    }
+
+    const parsedDate = new Date(normalized);
+    return Number.isNaN(parsedDate.getTime()) ? '' : parsedDate.toISOString();
   }
 
   private getImageUrl(title: string): string {
