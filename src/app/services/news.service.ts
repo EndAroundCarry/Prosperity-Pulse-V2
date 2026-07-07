@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of, shareReplay } from 'rxjs';
+import { Observable, catchError, map, of, shareReplay, throwError } from 'rxjs';
 import { NewsArticle } from '../models/news-article.model';
 import { environment } from '../../environments/environment';
 
@@ -16,6 +16,7 @@ interface AlphaVantageNewsItem {
   authors?: string[];
   summary?: string;
   source?: string;
+  banner_image?:string;
   topics?: Array<{ topic?: string; relevance_score?: string }>;
 }
 
@@ -30,6 +31,10 @@ export class NewsService {
   private readonly apiUrl = 'https://www.alphavantage.co/query';
   private readonly defaultTicker = 'AAPL';
   private readonly topicsCache = new Set<string>();
+  private cachedNewsResponse: AlphaVantageNewsResponse | null = null;
+  private cachedNewsExpiry = 0;
+  private inFlightNewsRequest: Observable<AlphaVantageNewsResponse> | null = null;
+  private readonly cacheTtlMs = 60 * 60 * 1000;
 
   getArticles(filter: NewsFilter, page: number, pageSize: number): Observable<NewsArticle[]> {
     return this.fetchNews().pipe(
@@ -67,15 +72,44 @@ export class NewsService {
   }
 
   private fetchNews(): Observable<AlphaVantageNewsResponse> {
-    return this.http
-      .get<AlphaVantageNewsResponse>(this.apiUrl, {
-        params: {
-          function: 'NEWS_SENTIMENT',
-          tickers: this.defaultTicker,
-          apikey: this.apiKey,
-        },
+    const now = Date.now();
+
+    if (this.cachedNewsResponse && now < this.cachedNewsExpiry) {
+      return of(this.cachedNewsResponse);
+    }
+
+    if (!this.inFlightNewsRequest) {
+      this.inFlightNewsRequest = this.http
+        .get<AlphaVantageNewsResponse>(this.apiUrl, {
+          params: {
+            function: 'NEWS_SENTIMENT',
+            tickers: this.defaultTicker,
+            apikey: this.apiKey,
+          },
+        })
+        .pipe(
+          map((response) => {
+            this.cachedNewsResponse = response;
+            this.cachedNewsExpiry = now + this.cacheTtlMs;
+            return response;
+          }),
+          catchError((error) => {
+            this.cachedNewsResponse = null;
+            this.cachedNewsExpiry = 0;
+            return throwError(() => error);
+          }),
+          shareReplay(1)
+        );
+    }
+
+    return this.inFlightNewsRequest.pipe(
+      map((response) => {
+        if (this.cachedNewsResponse && now < this.cachedNewsExpiry) {
+          return this.cachedNewsResponse;
+        }
+        return response;
       })
-      .pipe(shareReplay(1));
+    );
   }
 
   private mapResponseToArticles(response: AlphaVantageNewsResponse, filter: NewsFilter): NewsArticle[] {
@@ -83,7 +117,7 @@ export class NewsService {
       id: index + 1,
       title: item.title ?? 'Untitled article',
       summary: item.summary ?? '',
-      imageUrl: this.getImageUrl(item.title ?? ''),
+      imageUrl: item?.banner_image ?? this.getImageUrl(item.title ?? ''),
       sourceUrl: item.url ?? '#',
       sourceName: item.source ?? 'Unknown source',
       publishedAt: this.formatPublishedAt(item.time_published),
