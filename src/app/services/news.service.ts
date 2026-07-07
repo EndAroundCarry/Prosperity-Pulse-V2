@@ -28,7 +28,7 @@ interface AlphaVantageNewsResponse {
 export class NewsService {
   private readonly http = inject(HttpClient);
   private readonly apiKey = environment.alphaVantageKey;
-  private readonly apiUrl = 'https://www.alphavantage.co/query';
+  private readonly apiUrl = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&limit=1000&apikey=${environment.alphaVantageKey}`;
   private readonly defaultTicker = 'AAPL';
   private readonly topicsCache = new Set<string>();
   private cachedNewsResponse: AlphaVantageNewsResponse | null = null;
@@ -80,13 +80,7 @@ export class NewsService {
 
     if (!this.inFlightNewsRequest) {
       this.inFlightNewsRequest = this.http
-        .get<AlphaVantageNewsResponse>(this.apiUrl, {
-          params: {
-            function: 'NEWS_SENTIMENT',
-            tickers: this.defaultTicker,
-            apikey: this.apiKey,
-          },
-        })
+        .get<AlphaVantageNewsResponse>(this.apiUrl)
         .pipe(
           map((response) => {
             this.cachedNewsResponse = response;
