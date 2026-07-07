@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   OnDestroy,
+  OnInit,
   ViewChild,
   inject,
 } from '@angular/core';
@@ -36,7 +37,7 @@ import { NewsDetailDialogComponent } from '../news-detail-dialog/news-detail-dia
   ],
   templateUrl: './news-feed.component.html',
 })
-export class NewsFeedComponent implements AfterViewInit, OnDestroy {
+export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   @ViewChild('scrollSentinel') scrollSentinel!: ElementRef<HTMLElement>;
 
   private readonly newsService = inject(NewsService);
@@ -45,7 +46,7 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy {
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly pageSize = 12;
-  readonly allTopics = this.newsService.getAllTopics();
+  allTopics: string[] = [];
 
   articles: NewsArticle[] = [];
   currentPage = 0;
@@ -55,6 +56,12 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy {
   searchQuery = '';
   selectedTopics: string[] = [];
   private activeFilter: NewsFilter = { searchQuery: '', topics: [] };
+
+  ngOnInit(): void {
+    this.newsService.getAllTopics().subscribe((topics) => {
+      this.allTopics = topics;
+    });
+  }
 
   ngAfterViewInit(): void {
     this.loadMore();
@@ -154,8 +161,10 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy {
       next: (articles) => {
         this.articles = [...this.articles, ...articles];
         this.currentPage++;
-        this.hasMore = this.articles.length < this.newsService.getFilteredCount(this.activeFilter);
-        this.loading = false;
+        this.newsService.getFilteredCount(this.activeFilter).subscribe((count) => {
+          this.hasMore = this.articles.length < count;
+          this.loading = false;
+        });
       },
       error: () => {
         this.loading = false;

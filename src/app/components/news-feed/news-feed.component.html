@@ -83,11 +83,17 @@
         </mat-chip-set>
 
         <mat-card-content class="!px-4 !pt-2 !pb-4 flex-1">
-          <p class="text-sm text-slate-600 line-clamp-3 leading-relaxed">
-            {{ truncateSummary(article.summary) }}
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {{ article.sourceName }}
           </p>
-          <p class="text-xs text-slate-400 mt-2">
+          <p class="text-xs text-slate-400 mt-1">
             {{ article.publishedAt | date: 'mediumDate' }}
+          </p>
+          <p class="text-xs text-slate-500 mt-2">
+            {{ article.authors.length ? 'By ' + article.authors.join(', ') : 'Author unavailable' }}
+          </p>
+          <p class="text-sm text-slate-600 line-clamp-3 leading-relaxed mt-3">
+            {{ truncateSummary(article.summary) }}
           </p>
         </mat-card-content>
       </mat-card>
