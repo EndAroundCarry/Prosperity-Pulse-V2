@@ -1,4 +1,10 @@
-<mat-toolbar class="!bg-slate-900 !text-white shadow-lg px-4 sm:px-6 lg:px-8">
+<mat-toolbar
+  class="shadow-lg px-4 sm:px-6 lg:px-8"
+  [class.!bg-slate-950]="darkMode"
+  [class.!bg-slate-900]="!darkMode"
+  [class.!text-slate-100]="darkMode"
+  [class.!text-white]="!darkMode"
+>
   <div class="flex items-center gap-3 max-w-7xl mx-auto w-full">
     <svg
       class="w-9 h-9 sm:w-10 sm:h-10 shrink-0"
@@ -39,5 +45,21 @@
       <span class="text-lg sm:text-xl font-semibold tracking-tight">Prosperity Pulse</span>
       <span class="text-xs text-blue-200 hidden sm:block">Finance news that moves markets</span>
     </div>
+
+    <button
+      type="button"
+      class="ml-auto inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors duration-200"
+      [class.border-slate-700]="darkMode"
+      [class.border-slate-300]="!darkMode"
+      [class.bg-slate-800]="darkMode"
+      [class.bg-slate-100]="!darkMode"
+      [class.text-slate-100]="darkMode"
+      [class.text-slate-700]="!darkMode"
+      (click)="toggleDarkMode()"
+      aria-label="Toggle dark mode"
+    >
+      <span class="mr-2 text-base">{{ darkMode ? '☀️' : '🌙' }}</span>
+      <span>{{ darkMode ? 'Light' : 'Dark' }}</span>
+    </button>
   </div>
 </mat-toolbar>

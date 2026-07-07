@@ -10,6 +10,43 @@ body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
   background-color: #f8fafc;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body.dark-mode {
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+body.dark-mode .page-shell {
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+body.dark-mode .news-card {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+body.dark-mode .page-shell .text-slate-900 {
+  color: #f8fafc;
+}
+
+body.dark-mode .page-shell .text-slate-600 {
+  color: #e2e8f0;
+}
+
+body.dark-mode .page-shell .text-slate-500 {
+  color: #cbd5e1;
+}
+
+body.dark-mode .page-shell .text-slate-400 {
+  color: #94a3b8;
+}
+
+body.dark-mode .page-shell .text-slate-300 {
+  color: #64748b;
 }
 
 .news-card:focus-visible {

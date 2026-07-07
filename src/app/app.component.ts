@@ -4,7 +4,10 @@ import { NewsFeedComponent } from './components/news-feed/news-feed.component';
 
 @Component({
   selector: 'app-root',
-  imports: [NavbarComponent, NewsFeedComponent],
+  imports: [
+    NavbarComponent,
+    NewsFeedComponent
+  ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
