@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of, shareReplay, throwError } from 'rxjs';
+import { Firestore, collection, collectionData, doc, setDoc } from '@angular/fire/firestore';
+import { Observable, catchError, firstValueFrom, from, map, of, switchMap, throwError } from 'rxjs';
 import { NewsArticle } from '../models/news-article.model';
 import { environment } from '../../environments/environment';
 
@@ -16,7 +17,7 @@ interface AlphaVantageNewsItem {
   authors?: string[];
   summary?: string;
   source?: string;
-  banner_image?:string;
+  banner_image?: string;
   topics?: Array<{ topic?: string; relevance_score?: string }>;
 }
 
@@ -24,23 +25,35 @@ interface AlphaVantageNewsResponse {
   feed?: AlphaVantageNewsItem[];
 }
 
+interface FirestoreTopicDocument {
+  name: string;
+  newsIds: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class NewsService {
   private readonly http = inject(HttpClient);
+  private readonly firestore = inject(Firestore);
   private readonly apiKey = environment.alphaVantageKey;
-  private readonly apiUrl = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&limit=1000&apikey=${environment.alphaVantageKey}`;
+  private readonly apiUrl = 'https://www.alphavantage.co/query';
   private readonly defaultTicker = 'AAPL';
-  private readonly topicsCache = new Set<string>();
-  private cachedNewsResponse: AlphaVantageNewsResponse | null = null;
-  private cachedNewsExpiry = 0;
-  private inFlightNewsRequest: Observable<AlphaVantageNewsResponse> | null = null;
   private readonly cacheTtlMs = 60 * 60 * 1000;
+  private readonly localCacheKey = 'prosperity-pulse-news-cache';
+  private readonly topicCacheKey = 'prosperity-pulse-topics-cache';
+  private cacheArticles: NewsArticle[] | null = null;
+  private cacheTopics: string[] | null = null;
+  private cacheLoadedAt = 0;
+  private syncTimer: number | null = null;
+
+  constructor() {
+    this.restoreCache();
+    this.startScheduledSync();
+  }
 
   getArticles(filter: NewsFilter, page: number, pageSize: number): Observable<NewsArticle[]> {
-    return this.fetchNews().pipe(
-      map((response) => this.mapResponseToArticles(response, filter)),
+    return this.getCachedArticles().pipe(
+      map((articles) => this.filterArticles(articles, filter)),
       map((articles) => {
-        this.updateTopicsCache(articles);
         const start = page * pageSize;
         const end = start + pageSize;
         return articles.slice(start, end);
@@ -50,60 +63,194 @@ export class NewsService {
   }
 
   getFilteredCount(filter: NewsFilter): Observable<number> {
-    return this.fetchNews().pipe(
-      map((response) => this.mapResponseToArticles(response, filter).length),
+    return this.getCachedArticles().pipe(
+      map((articles) => this.filterArticles(articles, filter).length),
       catchError(() => of(0))
     );
   }
 
   getAllTopics(): Observable<string[]> {
-    if (this.topicsCache.size > 0) {
-      return of(Array.from(this.topicsCache).sort());
+    if (this.hasValidTopicCache()) {
+      return of([...this.cacheTopics!]);
     }
 
-    return this.fetchNews().pipe(
-      map((response) => this.extractTopics(response)),
+    return this.loadTopicsFromFirestore().pipe(
       map((topics) => {
-        topics.forEach((topic) => this.topicsCache.add(topic));
+        if (topics.length > 0) {
+          this.cacheTopics = topics;
+          this.persistTopicCache(topics);
+        }
         return topics;
       }),
       catchError(() => of([]))
     );
   }
 
-  private fetchNews(): Observable<AlphaVantageNewsResponse> {
-    const now = Date.now();
-
-    if (this.cachedNewsResponse && now < this.cachedNewsExpiry) {
-      return of(this.cachedNewsResponse);
+  private getCachedArticles(): Observable<NewsArticle[]> {
+    if (this.hasValidArticleCache()) {
+      return of([...this.cacheArticles!]);
     }
 
-    if (!this.inFlightNewsRequest) {
-      this.inFlightNewsRequest = this.http
-        .get<AlphaVantageNewsResponse>(this.apiUrl)
-        .pipe(
-          map((response) => {
-            this.cachedNewsResponse = response;
-            this.cachedNewsExpiry = now + this.cacheTtlMs;
-            return response;
-          }),
-          catchError((error) => {
-            this.cachedNewsResponse = null;
-            this.cachedNewsExpiry = 0;
-            return throwError(() => error);
-          }),
-          shareReplay(1)
-        );
-    }
-
-    return this.inFlightNewsRequest.pipe(
-      map((response) => {
-        if (this.cachedNewsResponse && now < this.cachedNewsExpiry) {
-          return this.cachedNewsResponse;
+    return this.loadArticlesFromFirestore().pipe(
+      map((articles) => {
+        if (articles.length > 0) {
+          this.cacheArticles = articles;
+          this.cacheLoadedAt = Date.now();
+          this.persistArticleCache(articles);
         }
-        return response;
-      })
+        return articles;
+      }),
+      catchError(() => of([]))
     );
+  }
+
+  private startScheduledSync(): void {
+    this.syncFromDatabaseOrAlphaVantage().subscribe({
+      error: () => undefined,
+    });
+
+    if (this.syncTimer) {
+      window.clearInterval(this.syncTimer);
+    }
+
+    this.syncTimer = window.setInterval(() => {
+      this.syncFromDatabaseOrAlphaVantage().subscribe({
+        error: () => undefined,
+      });
+    }, this.cacheTtlMs);
+  }
+
+  private syncFromDatabaseOrAlphaVantage(): Observable<void> {
+    if (this.hasValidArticleCache()) {
+      return of(undefined);
+    }
+
+    return this.loadArticlesFromFirestore().pipe(
+      switchMap((articles) => {
+        if (articles.length > 0) {
+          this.cacheArticles = articles;
+          this.cacheLoadedAt = Date.now();
+          this.persistArticleCache(articles);
+          return this.loadTopicsFromFirestore().pipe(
+            map((topics) => {
+              if (topics.length > 0) {
+                this.cacheTopics = topics;
+                this.persistTopicCache(topics);
+              }
+              return undefined;
+            })
+          );
+        }
+
+        return this.ingestFromAlphaVantage();
+      }),
+      catchError(() => of(undefined))
+    );
+  }
+
+  private ingestFromAlphaVantage(): Observable<void> {
+    return this.http
+      .get<AlphaVantageNewsResponse>(this.apiUrl, {
+        params: {
+          function: 'NEWS_SENTIMENT',
+          tickers: this.defaultTicker,
+          apikey: this.apiKey,
+          limit: '1000',
+        },
+      })
+      .pipe(
+        switchMap((response) => from(this.persistAlphaVantageData(response))),
+        catchError((error) => throwError(() => error))
+      );
+  }
+
+  private async persistAlphaVantageData(response: AlphaVantageNewsResponse): Promise<void> {
+    const articles = this.mapResponseToArticles(response, { searchQuery: '', topics: [] });
+    const topicNames = Array.from(new Set(articles.flatMap((article) => article.topics))).sort();
+
+    const newsCollection = collection(this.firestore, 'news');
+    const topicsCollection = collection(this.firestore, 'topics');
+    const newsDocs = await firstValueFrom(collectionData(newsCollection, { idField: 'firestoreId' }));
+    const topicDocs = await firstValueFrom(collectionData(topicsCollection, { idField: 'firestoreId' }));
+    const existingNewsIds = new Set(newsDocs.map((doc: any) => String(doc.firestoreId ?? '')));
+    const existingTopics = new Map<string, FirestoreTopicDocument>(
+      topicDocs.map((doc: any) => [String(doc.firestoreId ?? ''), { name: doc.name ?? '', newsIds: Array.isArray(doc.newsIds) ? doc.newsIds : [] }])
+    );
+
+    for (const article of articles) {
+      const articleDocId = this.buildArticleDocId(article);
+      if (!existingNewsIds.has(articleDocId)) {
+        await setDoc(doc(newsCollection, articleDocId), {
+          title: article.title,
+          summary: article.summary,
+          imageUrl: article.imageUrl,
+          sourceUrl: article.sourceUrl,
+          sourceName: article.sourceName,
+          publishedAt: article.publishedAt,
+          authors: article.authors,
+          topics: article.topics,
+          topicIds: article.topics.map((topic) => this.buildTopicDocId(topic)),
+        });
+        existingNewsIds.add(articleDocId);
+      }
+
+      article.topics.forEach((topic) => {
+        const topicDocId = this.buildTopicDocId(topic);
+        const existingTopic = existingTopics.get(topicDocId) ?? { name: topic, newsIds: [] };
+        if (!existingTopic.newsIds.includes(articleDocId)) {
+          existingTopic.newsIds.push(articleDocId);
+        }
+        existingTopics.set(topicDocId, existingTopic);
+      });
+    }
+
+    for (const [topicDocId, topicDoc] of existingTopics.entries()) {
+      await setDoc(doc(topicsCollection, topicDocId), {
+        name: topicDoc.name,
+        newsIds: Array.from(new Set(topicDoc.newsIds)),
+      });
+    }
+
+    this.cacheArticles = articles;
+    this.cacheTopics = topicNames;
+    this.cacheLoadedAt = Date.now();
+    this.persistArticleCache(articles);
+    this.persistTopicCache(topicNames);
+  }
+
+  private loadArticlesFromFirestore(): Observable<NewsArticle[]> {
+    return collectionData(collection(this.firestore, 'news'), { idField: 'firestoreId' }).pipe(
+      map((documents: any[]) =>
+        documents.map((document, index) => ({
+          id: index + 1,
+          title: document.title ?? 'Untitled article',
+          summary: document.summary ?? '',
+          imageUrl: document.imageUrl ?? this.getImageUrl(document.title ?? ''),
+          sourceUrl: document.sourceUrl ?? '#',
+          sourceName: document.sourceName ?? 'Unknown source',
+          publishedAt: document.publishedAt ?? '',
+          authors: Array.isArray(document.authors) ? document.authors : [],
+          topics: Array.isArray(document.topics) ? document.topics : [],
+        }))
+      )
+    );
+  }
+
+  private loadTopicsFromFirestore(): Observable<string[]> {
+    return collectionData(collection(this.firestore, 'topics'), { idField: 'firestoreId' }).pipe(
+      map((documents: any[]) =>
+        Array.from(new Set(documents.map((document) => document.name).filter((name): name is string => Boolean(name)))).sort((left, right) => left.localeCompare(right))
+      )
+    );
+  }
+
+  private filterArticles(articles: NewsArticle[], filter: NewsFilter): NewsArticle[] {
+    return articles.filter((article) => {
+      const matchesQuery = article.title.toLowerCase().includes(filter.searchQuery.toLowerCase());
+      const matchesTopics =
+        filter.topics.length === 0 || filter.topics.every((topic) => article.topics.includes(topic));
+      return matchesQuery && matchesTopics;
+    });
   }
 
   private mapResponseToArticles(response: AlphaVantageNewsResponse, filter: NewsFilter): NewsArticle[] {
@@ -111,7 +258,7 @@ export class NewsService {
       id: index + 1,
       title: item.title ?? 'Untitled article',
       summary: item.summary ?? '',
-      imageUrl: item?.banner_image ?? this.getImageUrl(item.title ?? ''),
+      imageUrl: item.banner_image ?? this.getImageUrl(item.title ?? ''),
       sourceUrl: item.url ?? '#',
       sourceName: item.source ?? 'Unknown source',
       publishedAt: this.formatPublishedAt(item.time_published),
@@ -122,20 +269,9 @@ export class NewsService {
     return articles.filter((article) => {
       const matchesQuery = article.title.toLowerCase().includes(filter.searchQuery.toLowerCase());
       const matchesTopics =
-        filter.topics.length === 0 ||
-        filter.topics.every((topic) => article.topics.includes(topic));
+        filter.topics.length === 0 || filter.topics.every((topic) => article.topics.includes(topic));
       return matchesQuery && matchesTopics;
     });
-  }
-
-  private extractTopics(response: AlphaVantageNewsResponse): string[] {
-    const topics = new Set<string>();
-
-    (response.feed ?? []).forEach((item) => {
-      this.extractTopicsForItem(item).forEach((topic) => topics.add(topic));
-    });
-
-    return Array.from(topics).sort((a, b) => a.localeCompare(b));
   }
 
   private extractTopicsForItem(item: AlphaVantageNewsItem): string[] {
@@ -146,10 +282,15 @@ export class NewsService {
       .filter((topic) => topic.length > 0);
   }
 
-  private updateTopicsCache(articles: NewsArticle[]): void {
-    articles.forEach((article) => {
-      article.topics.forEach((topic) => this.topicsCache.add(topic));
-    });
+  private buildArticleDocId(article: NewsArticle): string {
+    const titleSlug = (article.title || 'article').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const sourceSlug = (article.sourceName || 'source').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const dateSlug = article.publishedAt ? article.publishedAt.slice(0, 10) : 'unknown';
+    return `${sourceSlug}-${titleSlug}-${dateSlug}`.slice(0, 120);
+  }
+
+  private buildTopicDocId(topic: string): string {
+    return topic.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'topic';
   }
 
   private formatPublishedAt(timePublished?: string): string {
@@ -163,7 +304,6 @@ export class NewsService {
 
     if (compactMatch) {
       const [, year, month, day, hour, minute, second] = compactMatch;
-      const parsedYear = Number(year);
       const parsedMonth = Number(month);
       const parsedDay = Number(day);
       const parsedHour = Number(hour);
@@ -185,6 +325,56 @@ export class NewsService {
 
     const parsedDate = new Date(normalized);
     return Number.isNaN(parsedDate.getTime()) ? '' : parsedDate.toISOString();
+  }
+
+  private hasValidArticleCache(): boolean {
+    return Boolean(this.cacheArticles && this.cacheArticles.length > 0 && Date.now() - this.cacheLoadedAt < this.cacheTtlMs);
+  }
+
+  private hasValidTopicCache(): boolean {
+    return Boolean(this.cacheTopics && this.cacheTopics.length > 0);
+  }
+
+  private restoreCache(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const storedArticles = window.localStorage.getItem(this.localCacheKey);
+      if (storedArticles) {
+        this.cacheArticles = JSON.parse(storedArticles) as NewsArticle[];
+      }
+
+      const storedTopics = window.localStorage.getItem(this.topicCacheKey);
+      if (storedTopics) {
+        this.cacheTopics = JSON.parse(storedTopics) as string[];
+      }
+
+      const storedLoadedAt = window.localStorage.getItem('prosperity-pulse-news-cache-time');
+      this.cacheLoadedAt = storedLoadedAt ? Number(storedLoadedAt) : 0;
+    } catch {
+      this.cacheArticles = null;
+      this.cacheTopics = null;
+      this.cacheLoadedAt = 0;
+    }
+  }
+
+  private persistArticleCache(articles: NewsArticle[]): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(this.localCacheKey, JSON.stringify(articles));
+    window.localStorage.setItem('prosperity-pulse-news-cache-time', String(Date.now()));
+  }
+
+  private persistTopicCache(topics: string[]): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(this.topicCacheKey, JSON.stringify(topics));
   }
 
   private getImageUrl(title: string): string {
