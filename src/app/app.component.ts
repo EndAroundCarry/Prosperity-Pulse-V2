@@ -2,8 +2,6 @@ import { Component, OnInit, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { NewsFeedComponent } from './components/news-feed/news-feed.component';
-import { MatDialog } from '@angular/material/dialog';
-import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -17,7 +15,6 @@ import { LoginDialogComponent } from './components/login-dialog/login-dialog.com
 export class AppComponent implements OnInit {
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
-  private readonly dialog = inject(MatDialog);
 
   ngOnInit(): void {
     const siteName = 'Prosperity Pulse';
@@ -42,12 +39,6 @@ export class AppComponent implements OnInit {
     this.meta.updateTag({ rel: 'canonical', href: currentUrl });
 
     this.addStructuredData();
-  }
-
-  openLogin(): void {
-    this.dialog.open(LoginDialogComponent, {
-      width: '400px'
-    });
   }
 
   private addStructuredData(): void {
