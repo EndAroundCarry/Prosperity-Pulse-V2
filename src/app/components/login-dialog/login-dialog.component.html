@@ -1,0 +1,34 @@
+<div class="p-6">
+  <h2 mat-dialog-title class="text-2xl font-bold text-slate-900 dark:text-white mb-4">Login to Prosperity Pulse</h2>
+  <mat-dialog-content>
+    <form (ngSubmit)="submitLogin()" class="flex flex-col gap-4">
+      <mat-form-field class="w-full">
+        <mat-label>Username or Email</mat-label>
+        <input matInput type="email" [(ngModel)]="email" name="email" required />
+      </mat-form-field>
+      
+      <mat-form-field class="w-full">
+        <mat-label>Password</mat-label>
+        <input matInput type="password" [(ngModel)]="password" name="password" required />
+      </mat-form-field>
+
+      <button mat-flat-button color="primary" type="submit" class="w-full mt-2">
+        Sign In
+      </button>
+    </form>
+
+    <div class="flex items-center gap-4 my-4">
+      <div class="flex-grow border-t border-slate-300"></div>
+      <span class="text-slate-500 text-sm">or</span>
+      <div class="flex-grow border-t border-slate-300"></div>
+    </div>
+
+    <button mat-stroked-button color="primary" (click)="loginWithGoogle()" class="w-full flex items-center justify-center gap-2">
+      <mat-icon>account_circle</mat-icon>
+      Continue with Google
+    </button>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="close()">Close</button>
+  </mat-dialog-actions>
+</div>
