@@ -2,6 +2,10 @@ import { Component, OnInit, inject } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatDialog } from '@angular/material/dialog';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
+import { Router } from '@angular/router';
+import { Observable } from 'rxjs';
+import { User } from 'firebase/auth';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-navbar',
@@ -12,6 +16,10 @@ import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 export class NavbarComponent implements OnInit {
   darkMode = false;
   private readonly dialog = inject(MatDialog);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+
+  user$: Observable<User | null> = this.authService.currentUser$;
 
   ngOnInit(): void {
     const savedMode = window.localStorage.getItem('prosperity-pulse-dark-mode');
@@ -29,6 +37,10 @@ export class NavbarComponent implements OnInit {
       width: '400px',
       disableClose: true
     });
+  }
+
+  navigateToProfile(): void {
+    this.router.navigate(['/profile']);
   }
 
   private applyTheme(enabled: boolean): void {

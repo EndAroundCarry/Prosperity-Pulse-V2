@@ -1,0 +1,32 @@
+<div class="profile-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>My Profile</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="user-info">
+        <div class="info-item">
+          <strong>Name:</strong>
+          <span>{{ (user$ | async)?.displayName || 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+          <strong>Email:</strong>
+          <span>{{ (user$ | async)?.email || 'N/A' }}</span>
+        </div>
+      </div>
+
+      <h3>Topics of Interest</h3>
+      <div class="topics-grid">
+        <button
+          *ngFor="let topic of allTopics"
+          mat-chip
+          [class.selected]="selectedTopics.includes(topic)"
+          (click)="toggleTopic(topic)"
+        >
+          {{ topic }}
+          <mat-icon *ngIf="selectedTopics.includes(topic)">check</mat-icon>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

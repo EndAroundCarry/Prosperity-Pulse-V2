@@ -2,13 +2,14 @@ import { Component, OnInit, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { NewsFeedComponent } from './components/news-feed/news-feed.component';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
   imports: [
     NavbarComponent,
-    NewsFeedComponent
-  ],
+    RouterOutlet
+],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
