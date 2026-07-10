@@ -30,7 +30,6 @@ export class UserProfileComponent implements OnInit {
   selectedTopics: string[] = [];
 
   ngOnInit(): void {
-    console.log("here");
     if (environment.disableAuth) {
       // Provide test data when authentication is disabled for testing purposes
       this.user$ = new Observable<User | null>(observer => {
