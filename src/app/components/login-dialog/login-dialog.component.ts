@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login-dialog',
@@ -26,12 +27,14 @@ export class LoginDialogComponent {
   password = '';
   private readonly authService = inject(AuthService);
   private readonly dialogRef = inject(MatDialogRef<LoginDialogComponent>);
+  private readonly router = inject(Router);
 
   async submitLogin(): Promise<void> {
     if (this.email && this.password) {
       try {
         await this.authService.loginWithEmail(this.email, this.password);
         this.dialogRef.close(true);
+        this.router.navigate(['/news-feed']);
       } catch (error) {
         console.error('Login failed', error);
       }
@@ -42,6 +45,7 @@ export class LoginDialogComponent {
     try {
       await this.authService.loginWithGoogle();
       this.dialogRef.close(true);
+      this.router.navigate(['/news-feed']);
     } catch (error) {
       console.error('Google login failed', error);
     }
