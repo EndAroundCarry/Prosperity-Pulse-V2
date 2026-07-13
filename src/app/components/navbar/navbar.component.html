@@ -47,8 +47,48 @@
         <span class="text-xs text-blue-200 hidden sm:block">Finance news that moves markets</span>
       </div>
     </div>
+    
 
     <div class="flex items-center gap-3">
+      <div class="relative">
+        <button
+          type="button"
+          class="flex items-center justify-center w-10 h-10 rounded-full overflow-hidden border-2 border-slate-700"
+          [class.bg-slate-800]="darkMode"
+          [class.bg-slate-100]="!darkMode"
+          (click)="toggleProfileMenu()"
+          aria-label="User profile"
+        >
+          @if ((user$ | async)?.photoURL) {
+            <img
+              [src]="(user$ | async)?.photoURL"
+              [alt]="'Profile picture of ' + ((user$ | async)?.displayName || 'user')"
+              class="w-full h-full object-cover"
+            >
+          } @else {
+            <span class="text-lg font-semibold" [class.text-slate-100]="darkMode" [class.text-slate-700]="!darkMode">
+              {{ (user$ | async)?.displayName ? (user$ | async)?.displayName?.charAt(0) : '?' }}
+            </span>
+          }
+        </button>
+        
+        @if (showProfileMenu) {
+          <div
+            class="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-slate-800 border border-slate-700 z-10"
+            [class.!bg-slate-900]="!darkMode"
+            [class.!border-slate-300]="!darkMode"
+          >
+            <button
+              type="button"
+              class="block w-full text-left px-4 py-2 text-sm hover:bg-slate-700 transition-colors duration-200 !text-white"
+              (click)="navigateToProfile()"
+            >
+              Profile Settings
+            </button>
+          </div>
+        }
+      </div>
+
       <button
         type="button"
         class="inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors duration-200"
@@ -63,6 +103,7 @@
       >
         Login
       </button>
+      
       <button
         type="button"
         class="inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors duration-200"
@@ -78,6 +119,7 @@
         <span class="mr-2 text-base">{{ darkMode ? '☀️' : '🌙' }}</span>
         <span>{{ darkMode ? 'Light' : 'Dark' }}</span>
       </button>
+
     </div>
   </div>
 </mat-toolbar>

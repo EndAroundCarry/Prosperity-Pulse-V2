@@ -6,11 +6,19 @@ import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { User } from 'firebase/auth';
 import { AuthService } from '../../services/auth.service';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { AsyncPipe } from '@angular/common';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [MatToolbarModule],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    MatToolbarModule,
+    AsyncPipe
+  ],
   templateUrl: './navbar.component.html',
 })
 export class NavbarComponent implements OnInit {
@@ -20,6 +28,7 @@ export class NavbarComponent implements OnInit {
   private readonly router = inject(Router);
 
   user$: Observable<User | null> = this.authService.currentUser$;
+  showProfileMenu = false;
 
   ngOnInit(): void {
     const savedMode = window.localStorage.getItem('prosperity-pulse-dark-mode');
@@ -35,16 +44,22 @@ export class NavbarComponent implements OnInit {
   openLoginDialog(): void {
     this.dialog.open(LoginDialogComponent, {
       width: '400px',
-      disableClose: true
+      disableClose: true,
+      panelClass: 'login-dialog'
     });
   }
 
   navigateToProfile(): void {
+    this.showProfileMenu = false;
     this.router.navigate(['/profile']);
   }
 
   private applyTheme(enabled: boolean): void {
     document.body.classList.toggle('dark-mode', enabled);
     window.localStorage.setItem('prosperity-pulse-dark-mode', String(enabled));
+  }
+
+   toggleProfileMenu(): void {
+    this.showProfileMenu = !this.showProfileMenu;
   }
 }
