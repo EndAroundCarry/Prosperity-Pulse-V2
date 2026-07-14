@@ -38,6 +38,7 @@ export class NewsService {
   private readonly apiUrl = 'https://www.alphavantage.co/query';
   private readonly defaultTicker = 'AAPL';
   private readonly cacheTtlMs = 60 * 60 * 1000;
+  private readonly cacheTtlMsForCheck = 24 * 60 * 60 * 1000; // 24 hours
   private readonly localCacheKey = 'prosperity-pulse-news-cache';
   private readonly topicCacheKey = 'prosperity-pulse-topics-cache';
   private cacheArticles: NewsArticle[] | null = null;
@@ -48,6 +49,8 @@ export class NewsService {
   constructor() {
     this.restoreCache();
     this.startScheduledSync();
+    // Check for immediate fetch if needed
+    this.checkAndFetchIfNecessary();
   }
 
   getArticles(filter: NewsFilter, page: number, pageSize: number): Observable<NewsArticle[]> {
@@ -386,5 +389,30 @@ export class NewsService {
 
     const hash = Array.from(title).reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return fallbackImages[hash % fallbackImages.length];
+  }
+
+  // New method to check if immediate fetch is needed
+  private checkAndFetchIfNecessary(): void {
+    // Check if we have valid cache data
+    if (this.hasValidArticleCache()) {
+      // If we have valid cache, check if it's older than 24 hours
+      const isOlderThan24Hours = Date.now() - this.cacheLoadedAt > this.cacheTtlMsForCheck;
+      
+      if (isOlderThan24Hours) {
+        // If cache is older than 24 hours, fetch immediately from AlphaVantage
+        this.ingestFromAlphaVantage().subscribe({
+          error: (err) => {
+             console.log(err)
+          }
+        });
+      }
+    } else {
+      // If no cache exists, fetch immediately from AlphaVantage
+      this.ingestFromAlphaVantage().subscribe({
+        error: (err) => {
+          console.log(err)
+        }
+      });
+    }
   }
 }
