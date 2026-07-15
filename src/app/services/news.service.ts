@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, doc, setDoc } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, doc, setDoc, query, orderBy, limit, startAfter } from '@angular/fire/firestore';
 import { Observable, catchError, firstValueFrom, from, map, of, switchMap, throwError } from 'rxjs';
 import { NewsArticle } from '../models/news-article.model';
 import { environment } from '../../environments/environment';
@@ -45,6 +45,7 @@ export class NewsService {
   private cacheTopics: string[] | null = null;
   private cacheLoadedAt = 0;
   private syncTimer: number | null = null;
+  private readonly maxCachedArticles = 500; // Limit cached articles to prevent memory issues
 
   constructor() {
     this.restoreCache();
@@ -96,12 +97,14 @@ export class NewsService {
 
     return this.loadArticlesFromFirestore().pipe(
       map((articles) => {
-        if (articles.length > 0) {
-          this.cacheArticles = articles;
+        // Limit cached articles to prevent memory issues
+        const limitedArticles = articles.slice(0, this.maxCachedArticles);
+        if (limitedArticles.length > 0) {
+          this.cacheArticles = limitedArticles;
           this.cacheLoadedAt = Date.now();
-          this.persistArticleCache(articles);
+          this.persistArticleCache(limitedArticles);
         }
-        return articles;
+        return limitedArticles;
       }),
       catchError(() => of([]))
     );
@@ -131,9 +134,11 @@ export class NewsService {
     return this.loadArticlesFromFirestore().pipe(
       switchMap((articles) => {
         if (articles.length > 0) {
-          this.cacheArticles = articles;
+          // Limit cached articles to prevent memory issues
+          const limitedArticles = articles.slice(0, this.maxCachedArticles);
+          this.cacheArticles = limitedArticles;
           this.cacheLoadedAt = Date.now();
-          this.persistArticleCache(articles);
+          this.persistArticleCache(limitedArticles);
           return this.loadTopicsFromFirestore().pipe(
             map((topics) => {
               if (topics.length > 0) {
@@ -214,15 +219,21 @@ export class NewsService {
       });
     }
 
-    this.cacheArticles = articles;
+    // Limit cached articles to prevent memory issues
+    const limitedArticles = articles.slice(0, this.maxCachedArticles);
+    this.cacheArticles = limitedArticles;
     this.cacheTopics = topicNames;
     this.cacheLoadedAt = Date.now();
-    this.persistArticleCache(articles);
+    this.persistArticleCache(limitedArticles);
     this.persistTopicCache(topicNames);
   }
 
   private loadArticlesFromFirestore(): Observable<NewsArticle[]> {
-    return collectionData(collection(this.firestore, 'news'), { idField: 'firestoreId' }).pipe(
+    // Use Firestore query to limit results
+    const newsCollection = collection(this.firestore, 'news');
+    const q = query(newsCollection, orderBy('publishedAt', 'desc'), limit(1000));
+    
+    return collectionData(q, { idField: 'firestoreId' }).pipe(
       map((documents: any[]) =>
         documents.map((document, index) => ({
           id: index + 1,

@@ -52,6 +52,7 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   currentPage = 0;
   loading = false;
   hasMore = true;
+  private maxArticlesToShow = 100; // Limit total articles shown to prevent memory issues
 
   searchQuery = '';
   selectedTopics: string[] = [];
@@ -156,13 +157,36 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
       return;
     }
 
+    // Prevent loading more if we've reached the max articles
+    if (this.articles.length >= this.maxArticlesToShow) {
+      this.hasMore = false;
+      return;
+    }
+
     this.loading = true;
+    
+    // For memory efficiency, we'll only load 12 articles at a time
     this.newsService.getArticles(this.activeFilter, this.currentPage, this.pageSize).subscribe({
       next: (articles) => {
-        this.articles = [...this.articles, ...articles];
+        // Only add new articles if they don't already exist
+        const newArticles = articles.filter(article => 
+          !this.articles.some(existing => existing.id === article.id)
+        );
+        
+        // Limit total articles to prevent memory issues
+        const combinedArticles = [...this.articles, ...newArticles];
+        if (combinedArticles.length > this.maxArticlesToShow) {
+          this.articles = combinedArticles.slice(0, this.maxArticlesToShow);
+          this.hasMore = false;
+        } else {
+          this.articles = combinedArticles;
+        }
+        
         this.currentPage++;
+        
+        // Check if we've reached the end of results
         this.newsService.getFilteredCount(this.activeFilter).subscribe((count) => {
-          this.hasMore = this.articles.length < count;
+          this.hasMore = this.articles.length < count && this.articles.length < this.maxArticlesToShow;
           this.loading = false;
         });
       },
