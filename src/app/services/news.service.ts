@@ -54,22 +54,24 @@ export class NewsService {
     this.checkAndFetchIfNecessary();
   }
 
-  getArticles(filter: NewsFilter, page: number, pageSize: number): Observable<NewsArticle[]> {
-    return this.getCachedArticles().pipe(
-      map((articles) => this.filterArticles(articles, filter)),
+  /**
+   * Fetch a page of articles from Firestore (or AlphaVantage if needed) and return the raw articles.
+   * The caller is responsible for filtering by search query and topics.
+   */
+  getArticlesRaw(
+    filter: NewsFilter,
+    page: number,
+    pageSize: number,
+    lastPublishedAt?: string | null,
+    lastId?: string | null
+  ): Observable<NewsArticle[]> {
+    // We ignore lastId because we only order by publishedAt to avoid needing a composite index.
+    return this.loadArticlesFromFirestore(pageSize + 1, lastPublishedAt).pipe(
       map((articles) => {
-        const start = page * pageSize;
-        const end = start + pageSize;
-        return articles.slice(start, end);
+        // Return raw articles; filtering will be handled by the caller
+        return articles;
       }),
       catchError(() => of([]))
-    );
-  }
-
-  getFilteredCount(filter: NewsFilter): Observable<number> {
-    return this.getCachedArticles().pipe(
-      map((articles) => this.filterArticles(articles, filter).length),
-      catchError(() => of(0))
     );
   }
 
@@ -90,69 +92,54 @@ export class NewsService {
     );
   }
 
-  private getCachedArticles(): Observable<NewsArticle[]> {
-    if (this.hasValidArticleCache()) {
-      return of([...this.cacheArticles!]);
+  private loadArticlesFromFirestore(
+    limitCount: number,
+    lastPublishedAt?: string | null
+  ): Observable<NewsArticle[]> {
+    const newsCollection = collection(this.firestore, 'news');
+    let q = query(
+      newsCollection,
+      orderBy('publishedAt', 'desc'),
+      limit(limitCount)
+    );
+
+    if (lastPublishedAt) {
+      q = query(
+        newsCollection,
+        orderBy('publishedAt', 'desc'),
+        startAfter(lastPublishedAt),
+        limit(limitCount)
+      );
     }
 
-    return this.loadArticlesFromFirestore().pipe(
-      map((articles) => {
-        // Limit cached articles to prevent memory issues
-        const limitedArticles = articles.slice(0, this.maxCachedArticles);
-        if (limitedArticles.length > 0) {
-          this.cacheArticles = limitedArticles;
-          this.cacheLoadedAt = Date.now();
-          this.persistArticleCache(limitedArticles);
-        }
-        return limitedArticles;
-      }),
-      catchError(() => of([]))
+    return collectionData(q, { idField: 'firestoreId' }).pipe(
+      map((documents: any[]) =>
+        documents.map((document) => ({
+          id: self.crypto.randomUUID(),
+          title: document.title ?? 'Untitled article',
+          summary: document.summary ?? '',
+          imageUrl: document.imageUrl ?? this.getImageUrl(document.title ?? ''),
+          sourceUrl: document.sourceUrl ?? '#',
+          sourceName: document.sourceName ?? 'Unknown source',
+          publishedAt: document.publishedAt ?? '',
+          authors: Array.isArray(document.authors) ? document.authors : [],
+          topics: Array.isArray(document.topics) ? document.topics : [],
+        }))
+      )
     );
   }
 
-  private startScheduledSync(): void {
-    this.syncFromDatabaseOrAlphaVantage().subscribe({
-      error: () => undefined,
-    });
-
-    if (this.syncTimer) {
-      window.clearInterval(this.syncTimer);
-    }
-
-    this.syncTimer = window.setInterval(() => {
-      this.syncFromDatabaseOrAlphaVantage().subscribe({
-        error: () => undefined,
-      });
-    }, this.cacheTtlMs);
-  }
-
-  private syncFromDatabaseOrAlphaVantage(): Observable<void> {
-    if (this.hasValidArticleCache()) {
-      return of(undefined);
-    }
-
-    return this.loadArticlesFromFirestore().pipe(
-      switchMap((articles) => {
-        if (articles.length > 0) {
-          // Limit cached articles to prevent memory issues
-          const limitedArticles = articles.slice(0, this.maxCachedArticles);
-          this.cacheArticles = limitedArticles;
-          this.cacheLoadedAt = Date.now();
-          this.persistArticleCache(limitedArticles);
-          return this.loadTopicsFromFirestore().pipe(
-            map((topics) => {
-              if (topics.length > 0) {
-                this.cacheTopics = topics;
-                this.persistTopicCache(topics);
-              }
-              return undefined;
-            })
-          );
-        }
-
-        return this.ingestFromAlphaVantage();
-      }),
-      catchError(() => of(undefined))
+  private loadTopicsFromFirestore(): Observable<string[]> {
+    return collectionData(collection(this.firestore, 'topics'), { idField: 'firestoreId' }).pipe(
+      map((documents: any[]) =>
+        Array.from(
+          new Set(
+            documents
+              .map((document) => document.name)
+              .filter((name): name is string => Boolean(name))
+          )
+        ).sort((left, right) => left.localeCompare(right))
+      )
     );
   }
 
@@ -182,7 +169,10 @@ export class NewsService {
     const topicDocs = await firstValueFrom(collectionData(topicsCollection, { idField: 'firestoreId' }));
     const existingNewsIds = new Set(newsDocs.map((doc: any) => String(doc.firestoreId ?? '')));
     const existingTopics = new Map<string, FirestoreTopicDocument>(
-      topicDocs.map((doc: any) => [String(doc.firestoreId ?? ''), { name: doc.name ?? '', newsIds: Array.isArray(doc.newsIds) ? doc.newsIds : [] }])
+      topicDocs.map((doc: any) => [
+        String(doc.firestoreId ?? ''),
+        { name: doc.name ?? '', newsIds: Array.isArray(doc.newsIds) ? doc.newsIds : [] },
+      ])
     );
 
     for (const article of articles) {
@@ -228,48 +218,12 @@ export class NewsService {
     this.persistTopicCache(topicNames);
   }
 
-  private loadArticlesFromFirestore(): Observable<NewsArticle[]> {
-    // Use Firestore query to limit results
-    const newsCollection = collection(this.firestore, 'news');
-    const q = query(newsCollection, orderBy('publishedAt', 'desc'), limit(1000));
-    
-    return collectionData(q, { idField: 'firestoreId' }).pipe(
-      map((documents: any[]) =>
-        documents.map((document, index) => ({
-          id: index + 1,
-          title: document.title ?? 'Untitled article',
-          summary: document.summary ?? '',
-          imageUrl: document.imageUrl ?? this.getImageUrl(document.title ?? ''),
-          sourceUrl: document.sourceUrl ?? '#',
-          sourceName: document.sourceName ?? 'Unknown source',
-          publishedAt: document.publishedAt ?? '',
-          authors: Array.isArray(document.authors) ? document.authors : [],
-          topics: Array.isArray(document.topics) ? document.topics : [],
-        }))
-      )
-    );
-  }
-
-  private loadTopicsFromFirestore(): Observable<string[]> {
-    return collectionData(collection(this.firestore, 'topics'), { idField: 'firestoreId' }).pipe(
-      map((documents: any[]) =>
-        Array.from(new Set(documents.map((document) => document.name).filter((name): name is string => Boolean(name)))).sort((left, right) => left.localeCompare(right))
-      )
-    );
-  }
-
-  private filterArticles(articles: NewsArticle[], filter: NewsFilter): NewsArticle[] {
-    return articles.filter((article) => {
-      const matchesQuery = article.title.toLowerCase().includes(filter.searchQuery.toLowerCase());
-      const matchesTopics =
-        filter.topics.length === 0 || filter.topics.every((topic) => article.topics.includes(topic));
-      return matchesQuery && matchesTopics;
-    });
-  }
-
-  private mapResponseToArticles(response: AlphaVantageNewsResponse, filter: NewsFilter): NewsArticle[] {
+  private mapResponseToArticles(
+    response: AlphaVantageNewsResponse,
+    filter: NewsFilter
+  ): NewsArticle[] {
     const articles = (response.feed ?? []).map((item, index) => ({
-      id: index + 1,
+      id: self.crypto.randomUUID(),
       title: item.title ?? 'Untitled article',
       summary: item.summary ?? '',
       imageUrl: item.banner_image ?? this.getImageUrl(item.title ?? ''),
@@ -297,8 +251,16 @@ export class NewsService {
   }
 
   private buildArticleDocId(article: NewsArticle): string {
-    const titleSlug = (article.title || 'article').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const sourceSlug = (article.sourceName || 'source').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const titleSlug = (article.title || 'article')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    const sourceSlug = (article.sourceName || 'source')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
     const dateSlug = article.publishedAt ? article.publishedAt.slice(0, 10) : 'unknown';
     return `${sourceSlug}-${titleSlug}-${dateSlug}`.slice(0, 120);
   }
@@ -325,11 +287,16 @@ export class NewsService {
       const parsedSecond = Number(second);
 
       if (
-        parsedMonth < 1 || parsedMonth > 12 ||
-        parsedDay < 1 || parsedDay > 31 ||
-        parsedHour < 0 || parsedHour > 23 ||
-        parsedMinute < 0 || parsedMinute > 59 ||
-        parsedSecond < 0 || parsedSecond > 59
+        parsedMonth < 1 ||
+        parsedMonth > 12 ||
+        parsedDay < 1 ||
+        parsedDay > 31 ||
+        parsedHour < 0 ||
+        parsedHour > 23 ||
+        parsedMinute < 0 ||
+        parsedMinute > 59 ||
+        parsedSecond < 0 ||
+        parsedSecond > 59
       ) {
         return '';
       }
@@ -342,7 +309,11 @@ export class NewsService {
   }
 
   private hasValidArticleCache(): boolean {
-    return Boolean(this.cacheArticles && this.cacheArticles.length > 0 && Date.now() - this.cacheLoadedAt < this.cacheTtlMs);
+    return Boolean(
+      this.cacheArticles &&
+        this.cacheArticles.length > 0 &&
+        Date.now() - this.cacheLoadedAt < this.cacheTtlMs
+    );
   }
 
   private hasValidTopicCache(): boolean {
@@ -408,22 +379,68 @@ export class NewsService {
     if (this.hasValidArticleCache()) {
       // If we have valid cache, check if it's older than 24 hours
       const isOlderThan24Hours = Date.now() - this.cacheLoadedAt > this.cacheTtlMsForCheck;
-      
+
       if (isOlderThan24Hours) {
         // If cache is older than 24 hours, fetch immediately from AlphaVantage
         this.ingestFromAlphaVantage().subscribe({
           error: (err) => {
-             console.log(err)
-          }
+            console.log(err);
+          },
         });
       }
     } else {
       // If no cache exists, fetch immediately from AlphaVantage
       this.ingestFromAlphaVantage().subscribe({
         error: (err) => {
-          console.log(err)
-        }
+          console.log(err);
+        },
       });
     }
+  }
+
+  private startScheduledSync(): void {
+    this.syncFromDatabaseOrAlphaVantage().subscribe({
+      error: () => undefined,
+    });
+
+    if (this.syncTimer) {
+      window.clearInterval(this.syncTimer);
+    }
+
+    this.syncTimer = window.setInterval(() => {
+      this.syncFromDatabaseOrAlphaVantage().subscribe({
+        error: () => undefined,
+      });
+    }, this.cacheTtlMs);
+  }
+
+  private syncFromDatabaseOrAlphaVantage(): Observable<void> {
+    if (this.hasValidArticleCache()) {
+      return of(undefined);
+    }
+
+    return this.loadArticlesFromFirestore(this.maxCachedArticles).pipe(
+      switchMap((articles) => {
+        if (articles.length > 0) {
+          // Limit cached articles to prevent memory issues
+          const limitedArticles = articles.slice(0, this.maxCachedArticles);
+          this.cacheArticles = limitedArticles;
+          this.cacheLoadedAt = Date.now();
+          this.persistArticleCache(limitedArticles);
+          return this.loadTopicsFromFirestore().pipe(
+            map((topics) => {
+              if (topics.length > 0) {
+                this.cacheTopics = topics;
+                this.persistTopicCache(topics);
+              }
+              return undefined;
+            })
+          );
+        }
+
+        return this.ingestFromAlphaVantage();
+      }),
+      catchError(() => of(undefined))
+    );
   }
 }

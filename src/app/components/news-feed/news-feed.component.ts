@@ -58,6 +58,9 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   selectedTopics: string[] = [];
   private activeFilter: NewsFilter = { searchQuery: '', topics: [] };
 
+  // Track pagination state for Firestore
+  private lastPublishedAt: string | null = null;
+
   ngOnInit(): void {
     this.newsService.getAllTopics().subscribe((topics) => {
       this.allTopics = topics;
@@ -150,6 +153,7 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
     this.articles = [];
     this.currentPage = 0;
     this.hasMore = true;
+    this.lastPublishedAt = null;
   }
 
   private loadMore(): void {
@@ -164,35 +168,52 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
     }
 
     this.loading = true;
-    
-    // For memory efficiency, we'll only load 12 articles at a time
-    this.newsService.getArticles(this.activeFilter, this.currentPage, this.pageSize).subscribe({
-      next: (articles) => {
-        // Only add new articles if they don't already exist
-        const newArticles = articles.filter(article => 
-          !this.articles.some(existing => existing.id === article.id)
-        );
-        
-        // Limit total articles to prevent memory issues
-        const combinedArticles = [...this.articles, ...newArticles];
-        if (combinedArticles.length > this.maxArticlesToShow) {
-          this.articles = combinedArticles.slice(0, this.maxArticlesToShow);
-          this.hasMore = false;
-        } else {
-          this.articles = combinedArticles;
-        }
-        
-        this.currentPage++;
-        
-        // Check if we've reached the end of results
-        this.newsService.getFilteredCount(this.activeFilter).subscribe((count) => {
-          this.hasMore = this.articles.length < count && this.articles.length < this.maxArticlesToShow;
+
+    this.newsService
+      .getArticlesRaw(this.activeFilter, this.currentPage, this.pageSize, this.lastPublishedAt)
+      .subscribe({
+        next: (rawArticles) => {
+          // Filter articles locally based on search query and topics
+          const filtered = rawArticles.filter((article) => {
+            const matchesQuery = article.title
+              .toLowerCase()
+              .includes(this.activeFilter.searchQuery.toLowerCase());
+            const matchesTopics =
+              this.activeFilter.topics.length === 0 ||
+              this.activeFilter.topics.every((topic) => article.topics.includes(topic));
+            return matchesQuery && matchesTopics;
+          });
+
+          // Only add new articles if they don't already exist
+          const newArticles = filtered.filter(
+            (article) => !this.articles.some((existing) => existing.id === article.id)
+          );
+
+          // Limit total articles to prevent memory issues
+          const combinedArticles = [...this.articles, ...newArticles];
+          if (combinedArticles.length > this.maxArticlesToShow) {
+            this.articles = combinedArticles.slice(0, this.maxArticlesToShow);
+            this.hasMore = false;
+          } else {
+            this.articles = combinedArticles;
+          }
+
+          this.currentPage++;
+
+          // Determine if more data is available based on the number of raw articles fetched
+          this.hasMore = rawArticles.length > this.pageSize;
+
+          // Update pagination cursors for the next page
+          if (rawArticles.length > 0) {
+            const lastRaw = rawArticles[rawArticles.length - 1];
+            this.lastPublishedAt = lastRaw.publishedAt ?? null;
+          }
+
           this.loading = false;
-        });
-      },
-      error: () => {
-        this.loading = false;
-      },
-    });
+        },
+        error: () => {
+          this.loading = false;
+        },
+      });
   }
 }
