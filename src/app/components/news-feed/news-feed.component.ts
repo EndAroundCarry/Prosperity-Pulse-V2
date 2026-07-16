@@ -20,6 +20,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { NewsArticle } from '../../models/news-article.model';
 import { NewsFilter, NewsService } from '../../services/news.service';
 import { NewsDetailDialogComponent } from '../news-detail-dialog/news-detail-dialog.component';
+import { UserPreferencesService } from '../../services/user-preferences.service';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-news-feed',
@@ -42,6 +44,7 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
 
   private readonly newsService = inject(NewsService);
   private readonly dialog = inject(MatDialog);
+  private readonly userPrefsService = inject(UserPreferencesService);
   private observer: IntersectionObserver | null = null;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -55,8 +58,11 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   private maxArticlesToShow = 100; // Limit total articles shown to prevent memory issues
 
   searchQuery = '';
-  selectedTopics: string[] = [];
+  selectedTopics: string[] = []; // Topics selected via UI filter
   private activeFilter: NewsFilter = { searchQuery: '', topics: [] };
+
+  // Topics selected in user profile preferences
+  private userPreferredTopics: string[] = [];
 
   // Track pagination state for Firestore
   private lastPublishedAt: string | null = null;
@@ -64,6 +70,11 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   ngOnInit(): void {
     this.newsService.getAllTopics().subscribe((topics) => {
       this.allTopics = topics;
+    });
+
+    // Subscribe to user preferences to get selected topics
+    this.userPrefsService.getPreferences().subscribe((prefs) => {
+      this.userPreferredTopics = prefs.selectedTopics;
     });
   }
 
@@ -184,8 +195,17 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
             return matchesQuery && matchesTopics;
           });
 
+          // Reorder based on user preferred topics
+          const matched = filtered.filter((article) =>
+            article.topics.some((t) => this.userPreferredTopics.includes(t))
+          );
+          const others = filtered.filter(
+            (article) => !article.topics.some((t) => this.userPreferredTopics.includes(t))
+          );
+          const reordered = [...matched, ...others];
+
           // Only add new articles if they don't already exist
-          const newArticles = filtered.filter(
+          const newArticles = reordered.filter(
             (article) => !this.articles.some((existing) => existing.id === article.id)
           );
 

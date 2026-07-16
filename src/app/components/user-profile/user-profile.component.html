@@ -27,6 +27,26 @@
           <mat-icon *ngIf="selectedTopics.includes(topic)">check</mat-icon>
         </button>
       </div>
+
+      <h3>News Feed</h3>
+      <div *ngIf="newsArticles.length === 0">
+        <p>No news available.</p>
+      </div>
+      <div *ngFor="let article of newsArticles" class="news-card">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>{{ article.title }}</mat-card-title>
+            <mat-card-subtitle>{{ article.publishedAt | date:'medium' }}</mat-card-subtitle>
+          </mat-card-header>
+          <img mat-card-image [src]="article.imageUrl" alt="{{ article.title }}" />
+          <mat-card-content>
+            <p>{{ article.summary | slice:0:120 }}{{ article.summary.length > 120 ? '…' : '' }}</p>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-button (click)="openArticle(article)">Read More</button>
+          </mat-card-actions>
+        </mat-card>
+      </div>
     </mat-card-content>
   </mat-card>
 </div>
