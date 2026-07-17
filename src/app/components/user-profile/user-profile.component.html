@@ -28,6 +28,10 @@
         </button>
       </div>
 
+      <button mat-raised-button color="primary" [disabled]="!hasChanges" (click)="saveChanges()">
+        Save Changes
+      </button>
+
       <h3>News Feed</h3>
       <div *ngIf="newsArticles.length === 0">
         <p>No news available.</p>
