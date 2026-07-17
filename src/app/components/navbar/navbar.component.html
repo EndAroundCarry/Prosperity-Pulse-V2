@@ -6,7 +6,7 @@
   [class.!text-white]="!darkMode"
 >
   <div class="flex items-center justify-between max-w-7xl mx-auto w-full">
-    <div class="flex items-center gap-3">
+    <a routerLink="/news-feed" class="flex items-center gap-3">
       <svg
         class="w-9 h-9 sm:w-10 sm:h-10 shrink-0"
         viewBox="0 0 48 48"
@@ -46,7 +46,7 @@
         <span class="text-lg sm:text-xl font-semibold tracking-tight">Prosperity Pulse</span>
         <span class="text-xs text-blue-200 hidden sm:block">Finance news that moves markets</span>
       </div>
-    </div>
+    </a>
     
 
     <div class="flex items-center gap-3">
@@ -89,20 +89,23 @@
         }
       </div>
 
-      <button
-        type="button"
-        class="inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors duration-200"
-        [class.border-slate-700]="darkMode"
-        [class.border-slate-300]="!darkMode"
-        [class.bg-slate-800]="darkMode"
-        [class.bg-slate-100]="!darkMode"
-        [class.text-slate-100]="darkMode"
-        [class.text-slate-700]="!darkMode"
-        (click)="openLoginDialog()"
-        aria-label="Login"
-      >
-        Login
-      </button>
+      @if(!(user$ | async)){
+        <button
+          type="button"
+          class="inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors duration-200"
+          [class.border-slate-700]="darkMode"
+          [class.border-slate-300]="!darkMode"
+          [class.bg-slate-800]="darkMode"
+          [class.bg-slate-100]="!darkMode"
+          [class.text-slate-100]="darkMode"
+          [class.text-slate-700]="!darkMode"
+          (click)="openLoginDialog()"
+          aria-label="Login"
+        >
+          Login
+        </button>
+      }
+
       
       <button
         type="button"

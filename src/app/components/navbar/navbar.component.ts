@@ -2,13 +2,13 @@ import { Component, OnInit, inject } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatDialog } from '@angular/material/dialog';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { User } from 'firebase/auth';
 import { AuthService } from '../../services/auth.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-navbar',
@@ -17,8 +17,10 @@ import { AsyncPipe } from '@angular/common';
     MatButtonModule,
     MatIconModule,
     MatToolbarModule,
-    AsyncPipe
-  ],
+    AsyncPipe,
+    CommonModule,
+    RouterLink
+],
   templateUrl: './navbar.component.html',
 })
 export class NavbarComponent implements OnInit {
