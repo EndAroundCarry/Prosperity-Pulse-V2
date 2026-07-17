@@ -50,115 +50,71 @@ export class UserProfileComponent implements OnInit {
   newsArticles: NewsArticle[] = [];
 
   async ngOnInit(): Promise<void> {
-    this.userId = self.crypto.randomUUID();
-
-    const initFirestore = async () => {
-      const userRef = doc(this.firestore, 'users', this.userId);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          uuid: this.userId,
-          selectedTopics: [],
-        });
-      } else {
-        const data = userSnap.data();
-        this.selectedTopics = data['selectedTopics'] || [];
-        this.userPrefsService.setSelectedTopics(this.selectedTopics);
+    this.user$.subscribe(async (user) => {
+      if (!user) {
+        // this.router.navigate(['/']);
+        return;
       }
-      this.hasChanges = false;
-    };
 
-    const persistTopics = async (topics: string[]) => {
-      const userRef = doc(this.firestore, 'users', this.userId);
-      await updateDoc(userRef, {
-        selectedTopics: topics,
-      });
-    };
+      // Use the user's email as the unique identifier; fallback to uid if email is missing
+      this.userId = user.email ?? user.uid;
 
-    if (environment.disableAuth) {
-      this.user$ = new Observable<User | null>((observer) => {
-        observer.next({
-          uid: 'user-123456-abcde',
-          email: 'dev.tester@example.com',
-          emailVerified: true,
-          displayName: 'Alex Developer',
-          isAnonymous: false,
-          photoURL: 'https://example.com/profiles/alex.jpg',
-          phoneNumber: '+15555550123',
-          providerId: 'firebase',
-          tenantId: null,
-          metadata: {
-            creationTime: new Date('2026-01-01T00:00:00Z').toUTCString(),
-            lastSignInTime: new Date('2026-07-09T08:00:00Z').toUTCString(),
-          },
-          providerData: [
-            {
-              uid: 'user-123456-abcde',
-              displayName: 'Alex Developer',
-              email: 'dev.tester@example.com',
-              phoneNumber: '+15555550123',
-              photoURL: 'https://example.com/profiles/alex.jpg',
-              providerId: 'password',
-            },
-          ],
-          getIdToken: () => Promise.resolve('mock-id-token-xyz'),
-          getIdTokenResult: () =>
-            Promise.resolve({
-              token: 'mock-id-token-xyz',
-              authTime: '2026-07-09T08:00:00Z',
-              issuedAtTime: '2026-07-09T08:00:00Z',
-              expirationTime: '2026-07-09T09:00:00Z',
-              signInProvider: 'password',
-              claims: {},
-            }),
-          reload: () => Promise.resolve(),
-          delete: () => Promise.resolve(),
-          toJSON: () => ({}),
-        } as User);
-        observer.complete();
-      });
-
-      this.allTopics = [
-        'Finance',
-        'Stock Market',
-        'Cryptocurrency',
-        'Real Estate',
-        'Technology',
-        'Healthcare',
-      ];
-      this.selectedTopics = ['Finance', 'Technology'];
-      this.userPrefsService.setSelectedTopics(this.selectedTopics);
-
-      // Ensure mock topics exist in the distinct topics collection
-      await Promise.all(this.allTopics.map(t => this.ensureTopicExists(t)));
-      
-      initFirestore().then(() => {
-        persistTopics(this.selectedTopics);
-        this.loadNews();
-      });
-    } else {
-      this.user$.subscribe((user) => {
-        if (!user) {
-          // this.router.navigate(['/']);
+      const initFirestore = async () => {
+        const userRef = doc(this.firestore, 'users', this.userId);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            uuid: this.userId,
+            selectedTopics: [],
+          });
+        } else {
+          const data = userSnap.data();
+          this.selectedTopics = data['selectedTopics'] || [];
+          this.userPrefsService.setSelectedTopics(this.selectedTopics);
         }
-      });
+        this.hasChanges = false;
+      };
 
-      // Load topics from Firestore distinct collection
-      this.loadTopicsFromFirestore().then((topics) => {
-        this.allTopics = topics;
-        initFirestore().then(() => {
-          persistTopics(this.selectedTopics);
+      const persistTopics = async (topics: string[]) => {
+        const userRef = doc(this.firestore, 'users', this.userId);
+        await updateDoc(userRef, {
+          selectedTopics: topics,
         });
-      });
+      };
 
-      this.userPrefsService.loadPreferences();
-      this.userPrefsService.getPreferences().subscribe((prefs) => {
-        this.selectedTopics = prefs.selectedTopics;
-        initFirestore().then(() => {
+      if (environment.disableAuth) {
+        this.allTopics = [
+          'Finance',
+          'Stock Market',
+          'Cryptocurrency',
+          'Real Estate',
+          'Technology',
+          'Healthcare',
+        ];
+        this.selectedTopics = ['Finance', 'Technology'];
+        this.userPrefsService.setSelectedTopics(this.selectedTopics);
+
+        // Ensure mock topics exist in the distinct topics collection
+        await Promise.all(this.allTopics.map((t) => this.ensureTopicExists(t)));
+
+        await initFirestore();
+        await persistTopics(this.selectedTopics);
+        this.loadNews();
+      } else {
+        // Load topics from Firestore distinct collection
+        const topics = await this.loadTopicsFromFirestore();
+        this.allTopics = topics;
+
+        await initFirestore();
+        await persistTopics(this.selectedTopics);
+
+        this.userPrefsService.loadPreferences();
+        this.userPrefsService.getPreferences().subscribe((prefs) => {
+          this.selectedTopics = prefs.selectedTopics;
           this.loadNews();
         });
-      });
-    }
+      }
+    });
   }
 
   private async loadTopicsFromFirestore(): Promise<string[]> {
@@ -185,7 +141,7 @@ export class UserProfileComponent implements OnInit {
     }
     this.hasChanges = true;
     this.userPrefsService.setSelectedTopics(this.selectedTopics);
-    
+
     // Ensure topic exists in distinct topics collection
     this.ensureTopicExists(topic).catch(console.error);
 
