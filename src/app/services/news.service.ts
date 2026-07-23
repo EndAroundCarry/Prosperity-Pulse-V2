@@ -216,6 +216,20 @@ export class NewsService {
     this.cacheLoadedAt = Date.now();
     this.persistArticleCache(limitedArticles);
     this.persistTopicCache(topicNames);
+
+    // Ensure all topics exist in Firestore
+    await this.ensureTopicsExist(topicNames);
+  }
+
+  private async ensureTopicsExist(topics: string[]): Promise<void> {
+    const topicsRef = collection(this.firestore, 'topics');
+    for (const topic of topics) {
+      const q = query(topicsRef, where('name', '==', topic));
+      const snap = await firstValueFrom(collectionData(q));
+      if ((snap as any[]).length === 0) {
+        await setDoc(doc(topicsRef, self.crypto.randomUUID()), { name: topic });
+      }
+    }
   }
 
   private mapResponseToArticles(
