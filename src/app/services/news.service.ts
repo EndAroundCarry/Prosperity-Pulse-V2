@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData, doc, setDoc, query, orderBy, limit, startAfter } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, doc, setDoc, query, orderBy, limit, startAfter, where } from '@angular/fire/firestore';
 import { Observable, catchError, firstValueFrom, from, map, of, switchMap, throwError } from 'rxjs';
 import { NewsArticle } from '../models/news-article.model';
 import { environment } from '../../environments/environment';
