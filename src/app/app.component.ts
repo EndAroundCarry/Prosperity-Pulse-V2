@@ -16,6 +16,7 @@ import { RouterOutlet } from '@angular/router';
 export class AppComponent implements OnInit {
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
+  readonly currentYear = new Date().getFullYear();
 
   ngOnInit(): void {
     const siteName = 'Prosperity Pulse';

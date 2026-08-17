@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@angular/material/prebuilt-themes/azure-blue.css";
 
+/* Base & Typography */
 html,
 body {
   height: 100%;
@@ -8,14 +9,44 @@ body {
 
 body {
   margin: 0;
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: Roboto, "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background-color: #f8fafc;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  color: #0f172a;
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+/* Dark Mode Global Overrides */
 body.dark-mode {
   background-color: #020617;
   color: #f8fafc;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.5);
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
 }
 
 body.dark-mode .page-shell {
@@ -26,27 +57,106 @@ body.dark-mode .page-shell {
 body.dark-mode .news-card {
   background-color: #0f172a;
   color: #f8fafc;
-  border-color: #334155;
+  border-color: #1e293b;
 }
 
-body.dark-mode .page-shell .text-slate-900 {
+body.dark-mode .page-shell .text-slate-900,
+body.dark-mode .page-shell .text-slate-950 {
   color: #f8fafc;
 }
 
-body.dark-mode .page-shell .text-slate-600 {
+body.dark-mode .page-shell .text-slate-800 {
+  color: #f1f5f9;
+}
+
+body.dark-mode .page-shell .text-slate-700 {
   color: #e2e8f0;
 }
 
-body.dark-mode .page-shell .text-slate-500 {
+body.dark-mode .page-shell .text-slate-600 {
   color: #cbd5e1;
 }
 
-body.dark-mode .page-shell .text-slate-400 {
+body.dark-mode .page-shell .text-slate-500 {
   color: #94a3b8;
 }
 
-body.dark-mode .page-shell .text-slate-300 {
+body.dark-mode .page-shell .text-slate-400 {
   color: #64748b;
+}
+
+body.dark-mode .page-shell .bg-white {
+  background-color: #0f172a;
+}
+
+body.dark-mode .page-shell .bg-slate-50 {
+  background-color: #020617;
+}
+
+body.dark-mode .page-shell .bg-slate-100 {
+  background-color: #1e293b;
+}
+
+body.dark-mode .page-shell .border-slate-200 {
+  border-color: #1e293b;
+}
+
+/* Material Design 3 Dialog Refinements */
+.mat-mdc-dialog-container .mat-mdc-dialog-surface {
+  border-radius: 28px !important;
+  overflow: hidden !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+body.dark-mode .mat-mdc-dialog-container .mat-mdc-dialog-surface {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #1e293b !important;
+}
+
+.news-detail-dialog .mat-mdc-dialog-surface {
+  padding: 0 !important;
+}
+
+.news-detail-dialog .mat-mdc-dialog-content {
+  max-height: none !important;
+}
+
+.login-dialog .mat-mdc-dialog-surface {
+  padding: 0 !important;
+}
+
+/* Material Form Fields & Inputs */
+.news-filter-field .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+
+.mat-mdc-form-field {
+  font-family: inherit;
+}
+
+body.dark-mode .mat-mdc-text-field-wrapper {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+}
+
+/* Material Chips */
+.news-card-topics .mat-mdc-chip {
+  --mdc-chip-container-height: 24px;
+  font-size: 0.72rem;
+  border-radius: 8px;
+}
+
+.news-card-topics .mdc-evolution-chip-set__chips {
+  gap: 4px;
+}
+
+/* Card Focus & Transitions */
+.news-card {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+}
+
+.news-card:hover {
+  transform: translateY(-2px);
 }
 
 .news-card:focus-visible {
@@ -54,25 +164,3 @@ body.dark-mode .page-shell .text-slate-300 {
   outline-offset: 2px;
 }
 
-.news-detail-dialog .mat-mdc-dialog-surface {
-  border-radius: 12px;
-  overflow: hidden;
-  padding: 0;
-}
-
-.news-detail-dialog .mat-mdc-dialog-content {
-  max-height: none;
-}
-
-.news-card-topics .mat-mdc-chip {
-  --mdc-chip-container-height: 24px;
-  font-size: 0.7rem;
-}
-
-.news-card-topics .mdc-evolution-chip-set__chips {
-  gap: 4px;
-}
-
-.news-filter-field .mat-mdc-form-field-subscript-wrapper {
-  display: none;
-}

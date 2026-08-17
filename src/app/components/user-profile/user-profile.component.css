@@ -1,40 +1,75 @@
-.profile-container {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+:host {
+  display: block;
+  width: 100%;
 }
 
-.user-info {
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background-color: var(--mdc-theme-surface, #f5f5f5);
-  border-radius: 8px;
+.profile-card {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.info-item {
-  margin-bottom: 0.5rem;
+/* Material Chip Styles */
+.topic-chip {
+  outline: none;
+  font-family: inherit;
 }
 
-.info-item strong {
-  margin-right: 0.5rem;
+.topic-chip:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
-h3 {
-  margin-bottom: 1rem;
+.topic-chip.active-chip {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
 }
 
-.topics-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+.topic-chip.active-chip:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  box-shadow: 0 6px 14px -2px rgba(37, 99, 235, 0.45);
 }
 
-button[mat-chip] {
-  cursor: pointer;
-  transition: background-color 0.2s;
+.topic-chip.inactive-chip {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+  color: #334155;
 }
 
-button[mat-chip].selected {
-  background-color: var(--primary-color, #1976d2);
-  color: white;
+.topic-chip.inactive-chip:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  transform: translateY(-1px);
 }
+
+/* Dark mode specific rules for deep theme consistency */
+:host-context(body.dark-mode) .profile-card {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .topic-chip.inactive-chip {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+:host-context(body.dark-mode) .topic-chip.inactive-chip:hover {
+  background-color: #334155;
+  border-color: #475569;
+  color: #ffffff;
+}
+
+:host-context(body.dark-mode) .topic-chip.active-chip {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #3b82f6;
+  box-shadow: 0 4px 14px -2px rgba(59, 130, 246, 0.45);
+}
+
+:host-context(body.dark-mode) mat-divider {
+  border-top-color: #1e293b;
+}
+

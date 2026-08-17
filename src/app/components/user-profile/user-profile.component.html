@@ -1,36 +1,284 @@
-<div class="profile-container">
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>My Profile</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="user-info">
-        <div class="info-item">
-          <strong>Name:</strong>
-          <span>{{ (user$ | async)?.displayName || 'N/A' }}</span>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6">
+  <!-- Profile Hero & Info Card -->
+  <mat-card class="profile-card overflow-hidden !rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-slate-900">
+    <!-- Header Banner -->
+    <div class="relative h-32 sm:h-44 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 overflow-hidden">
+      <!-- Abstract Financial Art Grid/Lines -->
+      <svg
+        class="absolute inset-0 w-full h-full opacity-20"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
+        <path d="M0 80 Q 25 20, 50 60 T 100 10 L 100 100 L 0 100 Z" fill="white" />
+        <line x1="0" y1="20" x2="100" y2="20" stroke="white" stroke-dasharray="2,2" stroke-width="0.5" />
+        <line x1="0" y1="50" x2="100" y2="50" stroke="white" stroke-dasharray="2,2" stroke-width="0.5" />
+        <line x1="0" y1="80" x2="100" y2="80" stroke="white" stroke-dasharray="2,2" stroke-width="0.5" />
+      </svg>
+
+      <!-- Back navigation button -->
+      <a
+        routerLink="/news-feed"
+        class="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/25 hover:bg-black/40 text-white backdrop-blur-md text-xs sm:text-sm font-medium transition-colors"
+      >
+        <mat-icon class="!w-4 !h-4 !text-base leading-none">arrow_back</mat-icon>
+        <span>Back to Feed</span>
+      </a>
+
+      <!-- Status badge -->
+      <div class="absolute top-4 right-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 text-emerald-100 text-xs font-medium">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Active Reader</span>
+      </div>
+    </div>
+
+    <mat-card-content class="!p-6 sm:!p-8">
+      <!-- Avatar and identity row -->
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-6">
+        <div class="flex flex-col sm:flex-row items-center sm:items-end gap-4 text-center sm:text-left">
+          <!-- Avatar with elevation and ring -->
+          <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full ring-4 ring-white dark:ring-slate-900 shadow-xl overflow-hidden bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white text-3xl font-bold shrink-0">
+            @if ((user$ | async)?.photoURL) {
+              <img
+                [src]="(user$ | async)?.photoURL"
+                [alt]="'Avatar of ' + ((user$ | async)?.displayName || 'user')"
+                class="w-full h-full object-cover"
+              />
+            } @else {
+              <span>{{ getInitials((user$ | async)?.displayName, (user$ | async)?.email) }}</span>
+            }
+          </div>
+
+          <!-- User Name & Email -->
+          <div class="space-y-1 pb-1">
+            <div class="flex items-center justify-center sm:justify-start gap-2">
+              <h1 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {{ (user$ | async)?.displayName || 'Prosperity Reader' }}
+              </h1>
+              <span
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
+              >
+                PRO
+              </span>
+            </div>
+            <div class="flex items-center justify-center sm:justify-start gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+              <mat-icon class="!w-4 !h-4 !text-base text-slate-400">mail</mat-icon>
+              <span>{{ (user$ | async)?.email || 'Signed in via Guest / Mock' }}</span>
+              @if (userId) {
+                <button
+                  type="button"
+                  (click)="copyUserId()"
+                  matTooltip="Copy User ID"
+                  class="ml-1 p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  aria-label="Copy User ID"
+                >
+                  <mat-icon class="!w-3.5 !h-3.5 !text-sm">content_copy</mat-icon>
+                </button>
+              }
+            </div>
+          </div>
         </div>
-        <div class="info-item">
-          <strong>Email:</strong>
-          <span>{{ (user$ | async)?.email || 'N/A' }}</span>
-        </div>
+
+        <!-- Discard / Save status pill -->
+        @if (hasChanges) {
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-medium self-center sm:self-end">
+            <mat-icon class="!w-4 !h-4 !text-base text-amber-500">pending</mat-icon>
+            <span>Unsaved preferences</span>
+          </div>
+        }
       </div>
 
-      <h3>Topics of Interest</h3>
-      <div class="topics-grid">
-        <button
-          *ngFor="let topic of allTopics"
-          mat-chip
-          [class.selected]="selectedTopics.includes(topic)"
-          (click)="toggleTopic(topic)"
-        >
-          {{ topic }}
-          <mat-icon *ngIf="selectedTopics.includes(topic)">check</mat-icon>
-        </button>
-      </div>
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+          <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+            <mat-icon class="!text-xl">tune</mat-icon>
+          </div>
+          <div>
+            <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Selected Topics</div>
+            <div class="text-lg font-bold text-slate-900 dark:text-slate-100">
+              {{ selectedTopics.length }} <span class="text-xs font-normal text-slate-400">/ {{ allTopics.length }}</span>
+            </div>
+          </div>
+        </div>
 
-      <button mat-raised-button color="primary" [disabled]="!hasChanges" (click)="saveChanges()">
-        Save Changes
-      </button>
+        <div class="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+          <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+            <mat-icon class="!text-xl">dynamic_feed</mat-icon>
+          </div>
+          <div>
+            <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Feed Mode</div>
+            <div class="text-base font-bold text-slate-900 dark:text-slate-100">
+              {{ selectedTopics.length > 0 ? 'Customized' : 'All Topics' }}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
+          <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <mat-icon class="!text-xl">cloud_sync</mat-icon>
+          </div>
+          <div>
+            <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Sync Status</div>
+            <div class="text-base font-bold text-emerald-600 dark:text-emerald-400">
+              {{ hasChanges ? 'Pending Sync' : 'Synced' }}
+            </div>
+          </div>
+        </div>
+      </div>
     </mat-card-content>
   </mat-card>
+
+  <!-- Preferences / Topics Customization Card -->
+  <mat-card class="profile-card !rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-slate-900">
+    <mat-card-header class="!p-6 sm:!p-8 !pb-2">
+      <div class="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <mat-card-title class="!text-lg sm:!text-xl !font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+            <mat-icon class="text-blue-600 dark:text-blue-400">interests</mat-icon>
+            <span>Topics of Interest</span>
+          </mat-card-title>
+          <mat-card-subtitle class="!text-xs sm:!text-sm text-slate-500 dark:text-slate-400 !mt-1">
+            Choose sectors to tailor your market news feed. Filtered articles update automatically.
+          </mat-card-subtitle>
+        </div>
+
+        <!-- Quick actions: Select all / Clear -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            mat-stroked-button
+            type="button"
+            class="!text-xs !h-8 !px-3 !rounded-full"
+            (click)="selectAllTopics()"
+            [disabled]="selectedTopics.length === allTopics.length"
+          >
+            <mat-icon class="!w-4 !h-4 !text-sm mr-1">done_all</mat-icon>
+            Select All
+          </button>
+          <button
+            mat-stroked-button
+            type="button"
+            class="!text-xs !h-8 !px-3 !rounded-full"
+            (click)="clearAllTopics()"
+            [disabled]="selectedTopics.length === 0"
+          >
+            <mat-icon class="!w-4 !h-4 !text-sm mr-1">clear_all</mat-icon>
+            Clear All
+          </button>
+        </div>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content class="!p-6 sm:!p-8 !pt-4">
+      <!-- Loading indicator -->
+      @if (isLoading) {
+        <div class="flex flex-col items-center justify-center py-10 gap-3">
+          <mat-spinner diameter="36"></mat-spinner>
+          <p class="text-xs text-slate-400">Loading your profile preferences...</p>
+        </div>
+      } @else {
+        <!-- Topic Chips Grid -->
+        <div class="topics-grid-container flex flex-wrap gap-2.5 sm:gap-3.5 py-2">
+          @for (topic of allTopics; track topic) {
+            <button
+              type="button"
+              class="topic-chip group flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-medium transition-all duration-200 cursor-pointer select-none"
+              [class.active-chip]="isTopicSelected(topic)"
+              [class.inactive-chip]="!isTopicSelected(topic)"
+              (click)="toggleTopic(topic)"
+              [attr.aria-pressed]="isTopicSelected(topic)"
+            >
+              <!-- Topic Icon -->
+              <mat-icon
+                class="!w-4 !h-4 !text-base transition-colors"
+                [class.text-blue-600]="!isTopicSelected(topic)"
+                [class.dark:text-blue-400]="!isTopicSelected(topic)"
+                [class.text-white]="isTopicSelected(topic)"
+              >
+                {{ getTopicIcon(topic) }}
+              </mat-icon>
+
+              <!-- Topic Label -->
+              <span>{{ topic }}</span>
+
+              <!-- Selection Check Icon -->
+              <mat-icon
+                class="!w-4 !h-4 !text-base transition-transform"
+                [class.text-white]="isTopicSelected(topic)"
+                [class.text-slate-300]="!isTopicSelected(topic)"
+                [class.dark:text-slate-600]="!isTopicSelected(topic)"
+              >
+                {{ isTopicSelected(topic) ? 'check_circle' : 'add_circle_outline' }}
+              </mat-icon>
+            </button>
+          }
+        </div>
+
+        @if (allTopics.length === 0) {
+          <div class="text-center py-8 text-slate-400 text-sm">
+            <mat-icon class="!text-3xl !w-8 !h-8 text-slate-300 dark:text-slate-700 mb-2">category</mat-icon>
+            <p>No topics available yet.</p>
+          </div>
+        }
+
+        <!-- Information Callout -->
+        <div class="mt-6 flex items-start gap-3 p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50">
+          <mat-icon class="text-blue-600 dark:text-blue-400 shrink-0 !text-xl !w-5 !h-5 mt-0.5">info</mat-icon>
+          <div class="text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
+            <strong>Personalized Feed:</strong> When topics are selected, your news feed will prioritize stories tagged with those subjects. If no topics are selected, you will see all the latest stories across all markets.
+          </div>
+        </div>
+      }
+    </mat-card-content>
+
+    <mat-divider></mat-divider>
+
+    <!-- Card Actions Footer -->
+    <mat-card-actions class="!p-6 sm:!p-8 !flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/50">
+      <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 self-start sm:self-center">
+        @if (hasChanges) {
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span>You have unsaved changes</span>
+        } @else {
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>All preferences are up to date</span>
+        }
+      </div>
+
+      <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+        <button
+          mat-stroked-button
+          type="button"
+          class="!rounded-full !px-5 flex-1 sm:flex-initial"
+          [disabled]="!hasChanges || isSaving"
+          (click)="resetChanges()"
+        >
+          <span class="inline-flex items-center gap-1.5">
+            <mat-icon class="!w-4 !h-4 !text-base">undo</mat-icon>
+            <span>Discard</span>
+          </span>
+        </button>
+
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          class="!rounded-full !px-6 flex-1 sm:flex-initial shadow-md"
+          [disabled]="!hasChanges || isSaving"
+          (click)="saveChanges()"
+        >
+          <span class="inline-flex items-center gap-1.5">
+            @if (isSaving) {
+              <mat-spinner diameter="18"></mat-spinner>
+              <span>Saving...</span>
+            } @else {
+              <mat-icon class="!w-4 !h-4 !text-base">save</mat-icon>
+              <span>Save Preferences</span>
+            }
+          </span>
+        </button>
+      </div>
+    </mat-card-actions>
+  </mat-card>
 </div>
+

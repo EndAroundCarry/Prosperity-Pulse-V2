@@ -1,4 +1,29 @@
-<div class="page-shell min-h-screen flex flex-col bg-slate-50">
+<div class="page-shell min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
   <app-navbar />
-  <router-outlet></router-outlet>
+  <div class="flex-1">
+    <router-outlet></router-outlet>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+          $
+        </div>
+        <span class="font-semibold text-slate-700 dark:text-slate-200">Prosperity Pulse</span>
+        <span>— Real-time financial intelligence</span>
+      </div>
+
+      <div class="flex items-center gap-4 text-xs">
+        <span class="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          Live Feed Active
+        </span>
+        <span class="text-slate-300 dark:text-slate-700">|</span>
+        <span>© {{ currentYear }} Prosperity Pulse</span>
+      </div>
+    </div>
+  </footer>
 </div>
+

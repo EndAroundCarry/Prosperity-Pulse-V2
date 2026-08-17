@@ -7,7 +7,8 @@ import {
   ViewChild,
   inject,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -15,6 +16,8 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { NewsArticle } from '../../models/news-article.model';
@@ -25,8 +28,11 @@ import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-news-feed',
+  standalone: true,
   imports: [
+    CommonModule,
     DatePipe,
+    RouterModule,
     FormsModule,
     MatCardModule,
     MatChipsModule,
@@ -34,6 +40,8 @@ import { Observable } from 'rxjs';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatButtonModule,
+    MatTooltipModule,
     MatProgressSpinnerModule,
     MatSelectModule,
   ],
@@ -125,6 +133,34 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
       this.activeFilter.searchQuery.trim().length > 0 ||
       this.activeFilter.topics.length > 0
     );
+  }
+
+  clearFilters(): void {
+    this.searchQuery = '';
+    this.selectedTopics = [];
+    this.applyFilter({ searchQuery: '', topics: [] });
+  }
+
+  removeTopicFilter(topic: string): void {
+    this.selectedTopics = this.selectedTopics.filter((t) => t !== topic);
+    this.applyFilter({ searchQuery: this.searchQuery, topics: this.selectedTopics });
+  }
+
+  getTopicIcon(topic: string): string {
+    const iconMap: Record<string, string> = {
+      'Finance': 'account_balance',
+      'Stock Market': 'trending_up',
+      'Cryptocurrency': 'currency_bitcoin',
+      'Real Estate': 'apartment',
+      'Technology': 'memory',
+      'Healthcare': 'local_hospital',
+      'Economy': 'query_stats',
+      'Banking': 'payments',
+      'Energy': 'bolt',
+      'Markets': 'show_chart',
+      'Business': 'business_center',
+    };
+    return iconMap[topic] || 'label';
   }
 
   private setupInfiniteScroll(): void {
