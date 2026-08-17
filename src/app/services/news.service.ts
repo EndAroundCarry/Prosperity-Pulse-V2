@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Firestore, collection, collectionData, doc, setDoc, query, orderBy, limit, startAfter, where } from '@angular/fire/firestore';
-import { Observable, catchError, firstValueFrom, from, map, of, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, firstValueFrom, from, map, of, switchMap, throwError, take } from 'rxjs';
 import { NewsArticle } from '../models/news-article.model';
 import { environment } from '../../environments/environment';
 
@@ -38,7 +38,7 @@ export class NewsService {
   private readonly apiUrl = 'https://www.alphavantage.co/query';
   private readonly defaultTicker = 'AAPL';
   private readonly cacheTtlMs = 60 * 60 * 1000;
-  private readonly cacheTtlMsForCheck = 24 * 60 * 60 * 1000; // 24 hours
+  private readonly cacheTtlMsForCheck = 24 * 60 * 1000; // 24 minutes or 24 hours
   private readonly localCacheKey = 'prosperity-pulse-news-cache';
   private readonly topicCacheKey = 'prosperity-pulse-topics-cache';
   private cacheArticles: NewsArticle[] | null = null;
@@ -113,18 +113,26 @@ export class NewsService {
     }
 
     return collectionData(q, { idField: 'firestoreId' }).pipe(
+      take(1),
       map((documents: any[]) =>
-        documents.map((document) => ({
-          id: self.crypto.randomUUID(),
-          title: document.title ?? 'Untitled article',
-          summary: document.summary ?? '',
-          imageUrl: document.imageUrl ?? this.getImageUrl(document.title ?? ''),
-          sourceUrl: document.sourceUrl ?? '#',
-          sourceName: document.sourceName ?? 'Unknown source',
-          publishedAt: document.publishedAt ?? '',
-          authors: Array.isArray(document.authors) ? document.authors : [],
-          topics: Array.isArray(document.topics) ? document.topics : [],
-        }))
+        documents.map((document) => {
+          const docId = document.firestoreId || this.buildArticleDocId({
+            title: document.title,
+            sourceName: document.sourceName,
+            publishedAt: document.publishedAt,
+          } as any);
+          return {
+            id: docId,
+            title: document.title ?? 'Untitled article',
+            summary: document.summary ?? '',
+            imageUrl: document.imageUrl ?? this.getImageUrl(document.title ?? ''),
+            sourceUrl: document.sourceUrl ?? '#',
+            sourceName: document.sourceName ?? 'Unknown source',
+            publishedAt: document.publishedAt ?? '',
+            authors: Array.isArray(document.authors) ? document.authors : [],
+            topics: Array.isArray(document.topics) ? document.topics : [],
+          };
+        })
       )
     );
   }
@@ -236,17 +244,25 @@ export class NewsService {
     response: AlphaVantageNewsResponse,
     filter: NewsFilter
   ): NewsArticle[] {
-    const articles = (response.feed ?? []).map((item, index) => ({
-      id: self.crypto.randomUUID(),
-      title: item.title ?? 'Untitled article',
-      summary: item.summary ?? '',
-      imageUrl: item.banner_image ?? this.getImageUrl(item.title ?? ''),
-      sourceUrl: item.url ?? '#',
-      sourceName: item.source ?? 'Unknown source',
-      publishedAt: this.formatPublishedAt(item.time_published),
-      authors: item.authors ?? [],
-      topics: this.extractTopicsForItem(item),
-    }));
+    const articles = (response.feed ?? []).map((item, index) => {
+      const formattedDate = this.formatPublishedAt(item.time_published);
+      const docId = this.buildArticleDocId({
+        title: item.title,
+        sourceName: item.source,
+        publishedAt: formattedDate,
+      } as any);
+      return {
+        id: docId,
+        title: item.title ?? 'Untitled article',
+        summary: item.summary ?? '',
+        imageUrl: item.banner_image ?? this.getImageUrl(item.title ?? ''),
+        sourceUrl: item.url ?? '#',
+        sourceName: item.source ?? 'Unknown source',
+        publishedAt: formattedDate,
+        authors: item.authors ?? [],
+        topics: this.extractTopicsForItem(item),
+      };
+    });
 
     return articles.filter((article) => {
       const matchesQuery = article.title.toLowerCase().includes(filter.searchQuery.toLowerCase());

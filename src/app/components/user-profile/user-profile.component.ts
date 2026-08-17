@@ -11,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../services/auth.service';
 import { UserPreferencesService } from '../../services/user-preferences.service';
+import { SeoService } from '../../services/seo.service';
 import { Observable, firstValueFrom } from 'rxjs';
 import { User } from 'firebase/auth';
 import { environment } from '../../../environments/environment';
@@ -40,6 +41,7 @@ export class UserProfileComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly firestore = inject(Firestore);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly seoService = inject(SeoService);
 
   user$: Observable<User | null> = this.authService.currentUser$;
   allTopics: string[] = [];
@@ -51,6 +53,13 @@ export class UserProfileComponent implements OnInit {
   userId: string = '';
 
   async ngOnInit(): Promise<void> {
+    this.seoService.updateSeo({
+      title: 'My News Preferences & Profile',
+      description:
+        'Manage your Prosperity Pulse topic preferences, personalize your financial news feed, and control your account settings.',
+      keywords: 'profile settings, topic preferences, financial news personalization',
+      url: '/profile',
+    });
     this.user$.subscribe(async (user) => {
       if (!user) {
         this.isLoading = false;

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /news-feed
+Allow: /profile
+
+# Sitemap
+Sitemap: https://prosperity-pulse.web.app/sitemap.xml

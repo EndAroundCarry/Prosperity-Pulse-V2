@@ -2,25 +2,76 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Prosperity Pulse | Finance news and market insights</title>
+  <title>Prosperity Pulse | Real-Time Financial News & Market Intelligence</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
-  <meta name="description" content="Prosperity Pulse delivers timely finance news, market trends, investing insights, and economic updates in a fast, mobile-friendly experience.">
-  <meta name="keywords" content="finance news, stock market news, investing insights, market trends, economic updates, business headlines">
+  
+  <!-- Primary Meta Tags -->
+  <meta name="title" content="Prosperity Pulse | Real-Time Financial News & Market Intelligence">
+  <meta name="description" content="Stay ahead of market-moving stories with Prosperity Pulse. Real-time stock market updates, cryptocurrency trends, banking analysis, and macroeconomic insights from trusted financial publishers.">
+  <meta name="keywords" content="finance news, stock market updates, cryptocurrency news, investing insights, macroeconomic trends, banking news, Wall Street analysis, real-time finance">
   <meta name="author" content="Prosperity Pulse">
-  <meta name="robots" content="index,follow,max-image-preview:large">
-  <meta name="theme-color" content="#0f172a">
-  <meta property="og:title" content="Prosperity Pulse | Finance news and market insights">
-  <meta property="og:description" content="Stay ahead of market-moving stories with curated finance news, stock market updates, and investing insights.">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="theme-color" content="#020617">
+  <meta name="color-scheme" content="light dark">
+
+  <!-- Open Graph / Facebook / LinkedIn -->
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://prosperity-pulse.web.app/">
+  <meta property="og:title" content="Prosperity Pulse | Real-Time Financial News & Market Intelligence">
+  <meta property="og:description" content="Curated financial stories, policy movements, and market shifts from verified publishers. Ranked by community engagement.">
   <meta property="og:site_name" content="Prosperity Pulse">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Prosperity Pulse | Finance news and market insights">
-  <meta name="twitter:description" content="Stay ahead of market-moving stories with curated finance news, market trends, and investing insights.">
+  <meta name="twitter:url" content="https://prosperity-pulse.web.app/">
+  <meta name="twitter:title" content="Prosperity Pulse | Real-Time Financial News & Market Intelligence">
+  <meta name="twitter:description" content="Curated financial stories, policy movements, and market shifts from verified publishers. Ranked by community engagement.">
+
   <link rel="canonical" href="https://prosperity-pulse.web.app/">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  
+  <!-- Fonts & Icons Preconnect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <!-- JSON-LD Structured Data for Search Engines -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "NewsMediaOrganization",
+        "@id": "https://prosperity-pulse.web.app/#organization",
+        "name": "Prosperity Pulse",
+        "url": "https://prosperity-pulse.web.app",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://prosperity-pulse.web.app/favicon.ico"
+        },
+        "description": "Real-time financial news, macroeconomic analysis, and sector intelligence platform.",
+        "sameAs": []
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://prosperity-pulse.web.app/#website",
+        "url": "https://prosperity-pulse.web.app",
+        "name": "Prosperity Pulse",
+        "publisher": {
+          "@id": "https://prosperity-pulse.web.app/#organization"
+        },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://prosperity-pulse.web.app/news-feed?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    ]
+  }
+  </script>
 </head>
 <body class="mat-typography">
   <app-root></app-root>

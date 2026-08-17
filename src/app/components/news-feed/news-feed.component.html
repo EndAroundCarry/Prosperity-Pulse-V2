@@ -11,9 +11,20 @@
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>
           Live
         </span>
+        @if (!hasActiveFilters) {
+          <span
+            class="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/60">
+            <mat-icon class="!w-3.5 !h-3.5 !text-sm">trending_up</mat-icon>
+            <span>Ranked by Interactions</span>
+          </span>
+        }
       </div>
       <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-        Curated financial stories, policy movements, and market shifts from verified publishers.
+        @if (!hasActiveFilters) {
+          <span>Most interacted stories ranked first by community reactions (likes, dislikes) and discussions.</span>
+        } @else {
+          <span>Curated financial stories, policy movements, and market shifts matching your active filters.</span>
+        }
       </p>
     </div>
 
@@ -32,7 +43,7 @@
     class="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-4 shadow-sm space-y-3">
     <div class="flex flex-col sm:flex-row gap-3">
       <!-- Search Input -->
-      <mat-form-field class="news-filter-field flex-1 w-full !mb-0">
+      <mat-form-field appearance="outline" class="news-filter-field flex-1 w-full !mb-0">
         <mat-label>Search headlines or tickers</mat-label>
         <mat-icon matPrefix class="!mr-2 text-slate-400">search</mat-icon>
         <input matInput type="search" [(ngModel)]="searchQuery" (ngModelChange)="onSearchInput()"
@@ -46,7 +57,7 @@
       </mat-form-field>
 
       <!-- Topic Filter Multi-Select -->
-      <mat-form-field class="news-filter-field w-full sm:w-80 shrink-0 !mb-0">
+      <mat-form-field appearance="outline" class="news-filter-field w-full sm:w-80 shrink-0 !mb-0">
         <mat-label>Filter by sector</mat-label>
         <mat-icon matPrefix class="!mr-2 text-slate-400">filter_list</mat-icon>
         <mat-select multiple [(ngModel)]="selectedTopics" (closed)="onTopicFilterClosed()" placeholder="All Sectors"
@@ -133,6 +144,15 @@
           class="absolute top-3 left-3 px-2.5 py-1 text-[11px] font-semibold bg-blue-600/90 text-white rounded-full backdrop-blur-md shadow-sm">
           {{ article.sourceName }}
         </span>
+
+        @if (getArticleStats(article).totalInteractions > 0) {
+          <span
+            class="absolute top-3 right-3 px-2 py-0.5 text-[10px] font-bold bg-amber-500/90 text-white rounded-full backdrop-blur-md shadow-sm flex items-center gap-1">
+            <mat-icon class="!w-3 !h-3 !text-[11px] leading-none">local_fire_department</mat-icon>
+            <span>{{ getArticleStats(article).totalInteractions }}</span>
+          </span>
+        }
+
         <span
           class="absolute bottom-2.5 right-3 text-[10px] text-white/90 font-medium px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-sm">
           {{ article.publishedAt | date: 'mediumDate' }}
@@ -162,14 +182,32 @@
           {{ truncateSummary(article.summary, 130) }}
         </p>
 
-        <!-- Card Footer Metadata -->
-        <div
-          class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
-          <span class="truncate max-w-[150px]">
-            {{ article.authors.length ? article.authors[0] : article.sourceName }}
-          </span>
+        <!-- Card Footer Metadata & Live Engagement Stats -->
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+          <!-- Live Engagement Counters At a Glance -->
+          <div class="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 font-medium">
+            <!-- Likes -->
+            <span class="inline-flex items-center gap-1" matTooltip="Likes">
+              <mat-icon class="!w-3.5 !h-3.5 !text-sm text-blue-600 dark:text-blue-400 leading-none">thumb_up</mat-icon>
+              <span>{{ getArticleStats(article).likes }}</span>
+            </span>
+
+            <!-- Dislikes -->
+            <span class="inline-flex items-center gap-1" matTooltip="Dislikes">
+              <mat-icon class="!w-3.5 !h-3.5 !text-sm text-rose-500 leading-none">thumb_down</mat-icon>
+              <span>{{ getArticleStats(article).dislikes }}</span>
+            </span>
+
+            <!-- Comments -->
+            <span class="inline-flex items-center gap-1" matTooltip="Comments">
+              <mat-icon class="!w-3.5 !h-3.5 !text-sm text-indigo-500 leading-none">chat_bubble</mat-icon>
+              <span>{{ getArticleStats(article).commentCount }}</span>
+            </span>
+          </div>
+
+          <!-- Read Action Link -->
           <span
-            class="inline-flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400 group-hover:translate-x-0.5 transition-transform">
+            class="inline-flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400 group-hover:translate-x-0.5 transition-transform shrink-0">
             <span>Read</span>
             <mat-icon class="!w-3.5 !h-3.5 !text-sm">arrow_forward</mat-icon>
           </span>
@@ -199,4 +237,4 @@
     }
   </div>
   }
-</section>
+</section>

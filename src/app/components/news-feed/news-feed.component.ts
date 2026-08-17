@@ -24,7 +24,10 @@ import { NewsArticle } from '../../models/news-article.model';
 import { NewsFilter, NewsService } from '../../services/news.service';
 import { NewsDetailDialogComponent } from '../news-detail-dialog/news-detail-dialog.component';
 import { UserPreferencesService } from '../../services/user-preferences.service';
-import { Observable } from 'rxjs';
+import { CommentService } from '../../services/comment.service';
+import { SeoService } from '../../services/seo.service';
+import { ArticleEngagementStats } from '../../models/comment.model';
+import { Observable, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-news-feed',
@@ -53,13 +56,18 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   private readonly newsService = inject(NewsService);
   private readonly dialog = inject(MatDialog);
   private readonly userPrefsService = inject(UserPreferencesService);
+  private readonly commentService = inject(CommentService);
+  private readonly seoService = inject(SeoService);
+
   private observer: IntersectionObserver | null = null;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private statsSub?: Subscription;
 
   readonly pageSize = 12;
   allTopics: string[] = [];
 
   articles: NewsArticle[] = [];
+  engagementStats: Record<string, ArticleEngagementStats> = {};
   currentPage = 0;
   loading = false;
   hasMore = true;
@@ -76,6 +84,8 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   private lastPublishedAt: string | null = null;
 
   ngOnInit(): void {
+    this.updateFeedSeo();
+
     this.newsService.getAllTopics().subscribe((topics) => {
       this.allTopics = topics;
     });
@@ -84,6 +94,42 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
     this.userPrefsService.getPreferences().subscribe((prefs) => {
       this.userPreferredTopics = prefs.selectedTopics;
     });
+
+    // Subscribe to real-time article engagement stats (likes, dislikes, comments)
+    this.statsSub = this.commentService.getAllArticleEngagementStats().subscribe((stats) => {
+      this.engagementStats = stats;
+      if (!this.hasActiveFilters && this.articles.length > 0) {
+        this.articles = this.sortArticles(this.articles);
+      }
+    });
+  }
+
+  private updateFeedSeo(): void {
+    if (this.searchQuery.trim()) {
+      this.seoService.updateSeo({
+        title: `Search: "${this.searchQuery}" Market News`,
+        description: `Browse latest news stories, ticker movements, and financial analysis for "${this.searchQuery}" on Prosperity Pulse.`,
+        keywords: `${this.searchQuery}, market search, financial stocks, trading insights`,
+        url: '/news-feed',
+      });
+    } else if (this.selectedTopics.length > 0) {
+      const topicStr = this.selectedTopics.join(', ');
+      this.seoService.updateSeo({
+        title: `${topicStr} News & Market Analysis`,
+        description: `Explore curated news and sector intelligence in ${topicStr}. Real-time headlines and community analysis on Prosperity Pulse.`,
+        keywords: `${topicStr}, sector news, business intelligence, market sectors`,
+        url: '/news-feed',
+      });
+    } else {
+      this.seoService.updateSeo({
+        title: 'Live Market News Feed & Financial Stories',
+        description:
+          'Live financial news feed with community sentiment, discussion, and curated market updates across Stock Market, Crypto, Economy, and Banking.',
+        keywords:
+          'live financial feed, market news stream, stock updates, crypto analysis, breaking market headlines, investor sentiment',
+        url: '/news-feed',
+      });
+    }
   }
 
   ngAfterViewInit(): void {
@@ -96,6 +142,42 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
     if (this.searchDebounceTimer) {
       clearTimeout(this.searchDebounceTimer);
     }
+    this.statsSub?.unsubscribe();
+  }
+
+  getArticleStats(article: NewsArticle): ArticleEngagementStats {
+    const key = this.commentService.getArticleKey(article);
+    return (
+      this.engagementStats[key] || {
+        articleId: key,
+        likes: 0,
+        dislikes: 0,
+        commentCount: 0,
+        totalInteractions: 0,
+        score: 0,
+      }
+    );
+  }
+
+  private sortArticles(articlesList: NewsArticle[]): NewsArticle[] {
+    if (this.hasActiveFilters) {
+      return articlesList;
+    }
+
+    // When NO filter is active, rank the most interacted with news first (score descending)
+    return [...articlesList].sort((a, b) => {
+      const statsA = this.getArticleStats(a);
+      const statsB = this.getArticleStats(b);
+
+      if (statsB.score !== statsA.score) {
+        return statsB.score - statsA.score;
+      }
+
+      // Tie-break by publication date (newest first)
+      const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return dateB - dateA;
+    });
   }
 
   onSearchInput(): void {
@@ -192,6 +274,7 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
     }
 
     this.activeFilter = normalizedFilter;
+    this.updateFeedSeo();
     this.resetFeed();
     this.loadMore();
   }
@@ -231,27 +314,39 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
             return matchesQuery && matchesTopics;
           });
 
-          // Reorder based on user preferred topics
-          const matched = filtered.filter((article) =>
-            article.topics.some((t) => this.userPreferredTopics.includes(t))
-          );
-          const others = filtered.filter(
-            (article) => !article.topics.some((t) => this.userPreferredTopics.includes(t))
-          );
-          const reordered = [...matched, ...others];
+          // If active filters, prioritize user topics, otherwise sort by interaction score
+          let reordered: NewsArticle[];
+          if (this.hasActiveFilters) {
+            const matched = filtered.filter((article) =>
+              article.topics.some((t) => this.userPreferredTopics.includes(t))
+            );
+            const others = filtered.filter(
+              (article) => !article.topics.some((t) => this.userPreferredTopics.includes(t))
+            );
+            reordered = [...matched, ...others];
+          } else {
+            reordered = this.sortArticles(filtered);
+          }
 
-          // Only add new articles if they don't already exist
-          const newArticles = reordered.filter(
-            (article) => !this.articles.some((existing) => existing.id === article.id)
-          );
+          // Combine and strictly deduplicate all articles using unique article key
+          const uniqueMap = new Map<string, NewsArticle>();
+          for (const article of [...this.articles, ...reordered]) {
+            const key = this.commentService.getArticleKey(article);
+            if (!uniqueMap.has(key)) {
+              uniqueMap.set(key, article);
+            }
+          }
 
-          // Limit total articles to prevent memory issues
-          const combinedArticles = [...this.articles, ...newArticles];
-          if (combinedArticles.length > this.maxArticlesToShow) {
-            this.articles = combinedArticles.slice(0, this.maxArticlesToShow);
+          const combinedArticles = Array.from(uniqueMap.values());
+          const finalArticles = this.hasActiveFilters
+            ? combinedArticles
+            : this.sortArticles(combinedArticles);
+
+          if (finalArticles.length > this.maxArticlesToShow) {
+            this.articles = finalArticles.slice(0, this.maxArticlesToShow);
             this.hasMore = false;
           } else {
-            this.articles = combinedArticles;
+            this.articles = finalArticles;
           }
 
           this.currentPage++;

@@ -135,6 +135,20 @@ body.dark-mode .mat-mdc-dialog-container .mat-mdc-dialog-surface {
   font-family: inherit;
 }
 
+/* Fix Tailwind CSS conflict with Angular Material MDC Notched Outline */
+.mat-mdc-form-field .mdc-notched-outline__leading {
+  border-right: none !important;
+}
+
+.mat-mdc-form-field .mdc-notched-outline__notch {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.mat-mdc-form-field .mdc-notched-outline__trailing {
+  border-left: none !important;
+}
+
 body.dark-mode .mat-mdc-text-field-wrapper {
   background-color: rgba(15, 23, 42, 0.6) !important;
 }
