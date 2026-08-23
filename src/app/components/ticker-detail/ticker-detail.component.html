@@ -1,0 +1,155 @@
+<!--
+  Ticker Detail — /ticker/:symbol
+  Price header, key stats, earnings history, related news.
+-->
+
+<div class="ticker-container">
+  <!-- Back link -->
+  <a routerLink="/" class="back-link">
+    <mat-icon>arrow_back</mat-icon>
+    <span>Dashboard</span>
+  </a>
+
+  <!-- Price header -->
+  <div class="price-header">
+    @if (loading) {
+      <pp-skeleton shape="rect" height="120px" />
+    } @else {
+      <div class="price-header-content">
+        <div class="symbol-block">
+          <h1 class="symbol-ticker">{{ symbol }}</h1>
+          @if (fundamentals?.name) {
+            <span class="symbol-name">{{ fundamentals!.name }}</span>
+          }
+          @if (fundamentals?.sector) {
+            <span class="symbol-sector">{{ fundamentals!.sector }} · {{ fundamentals!.industry }}</span>
+          }
+        </div>
+
+        @if (snapshot) {
+          <div class="price-block">
+            <span class="current-price">{{ formatPrice(snapshot.price) }}</span>
+            <span
+              class="price-change"
+              [class.positive]="snapshot.changePercent >= 0"
+              [class.negative]="snapshot.changePercent < 0"
+            >
+              <span class="change-arrow">{{ snapshot.changePercent >= 0 ? '▲' : '▼' }}</span>
+              {{ formatPrice(snapshot.change >= 0 ? snapshot.change : -snapshot.change) }}
+              ({{ formatPercent(snapshot.changePercent) }})
+            </span>
+            <span class="price-asof">Close, {{ formatDate(snapshot.asOf) }}</span>
+          </div>
+
+          @if (snapshot.sparkline && snapshot.sparkline.length > 1) {
+            <div class="sparkline-block">
+              <pp-sparkline
+                [data]="snapshot.sparkline"
+                [positive]="snapshot.changePercent >= 0"
+                [width]="200"
+                [height]="60"
+              />
+            </div>
+          }
+        } @else if (dataQueued) {
+          <div class="queued-notice">
+            <mat-icon>hourglass_top</mat-icon>
+            <span>Price data queued — arriving within the hour</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Key Stats Grid -->
+  @if (fundamentals) {
+    <section class="stats-section">
+      <h2 class="section-title">Key Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Market Cap</span>
+          <span class="stat-value">{{ formatLargeNumber(fundamentals.marketCap) }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">P/E Ratio</span>
+          <span class="stat-value">{{ fundamentals.peRatio || '—' }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">EPS</span>
+          <span class="stat-value">{{ fundamentals.eps || '—' }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Dividend Yield</span>
+          <span class="stat-value">{{ formatPercent(fundamentals.dividendYield) }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Beta</span>
+          <span class="stat-value">{{ fundamentals.beta || '—' }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">52W High</span>
+          <span class="stat-value">{{ formatPrice(fundamentals.weekFiftyTwoHigh) }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">52W Low</span>
+          <span class="stat-value">{{ formatPrice(fundamentals.weekFiftyTwoLow) }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Description -->
+    @if (fundamentals.description) {
+      <section class="description-section">
+        <h2 class="section-title">About</h2>
+        <p class="description-text">{{ fundamentals.description }}</p>
+      </section>
+    }
+
+    <!-- Earnings History -->
+    @if (fundamentals!.earnings?.quarterly && fundamentals!.earnings!.quarterly!.length > 0) {
+      <section class="earnings-section">
+        <h2 class="section-title">Earnings History</h2>
+        <div class="earnings-table-wrap">
+          <table class="earnings-table">
+            <thead>
+              <tr>
+                <th>Quarter</th>
+                <th>Reported EPS</th>
+                <th>Estimate</th>
+                <th>Surprise</th>
+                <th>Beat/Miss</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (q of fundamentals!.earnings!.quarterly!.slice(0, 8); track q.fiscalDateEnding) {
+                <tr>
+                  <td>{{ q.fiscalDateEnding }}</td>
+                  <td>{{ q.reportedEPS }}</td>
+                  <td>{{ q.estimatedEPS || '—' }}</td>
+                  <td [class.positive]="q.surprise > 0" [class.negative]="q.surprise < 0">
+                    {{ q.surprise > 0 ? '+' : '' }}{{ q.surprisePercentage ? q.surprisePercentage.toFixed(1) + '%' : '—' }}
+                  </td>
+                  <td>
+                    @if (q.reportedEPS > q.estimatedEPS && q.estimatedEPS > 0) {
+                      <span class="beat-badge">Beat</span>
+                    } @else if (q.reportedEPS < q.estimatedEPS && q.estimatedEPS > 0) {
+                      <span class="miss-badge">Miss</span>
+                    } @else {
+                      <span class="na-badge">—</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  } @else if (!loading && !dataQueued) {
+    <div class="no-data-notice">
+      <mat-icon>info_outline</mat-icon>
+      <span>No fundamental data available yet for {{ symbol }}.</span>
+      <span class="sub">The next scheduler tick will fetch it.</span>
+    </div>
+  }
+</div>

@@ -16,6 +16,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'ticker/:symbol',
+    loadComponent: () =>
+      import('./components/ticker-detail/ticker-detail.component').then(
+        (m) => m.TickerDetailComponent
+      ),
+  },
+  {
     path: 'profile',
     loadComponent: () =>
       import('./components/user-profile/user-profile.component').then(

@@ -47,6 +47,16 @@
 
     <!-- Right Controls -->
     <div class="flex items-center gap-2.5 sm:gap-3">
+      <!-- Search Button (Ctrl+K) -->
+      <button type="button" (click)="openCommandPalette()"
+        matTooltip="Search tickers (Ctrl+K)"
+        class="flex items-center gap-2 px-3 h-9 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-xs font-medium"
+        aria-label="Search tickers">
+        <mat-icon class="!w-4 !h-4 !text-base">search</mat-icon>
+        <span class="hidden sm:inline">Search</span>
+        <span class="hidden sm:inline text-[10px] text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5">⌘K</span>
+      </button>
+
       <!-- Dark Mode Toggle Button -->
       <button type="button" (click)="toggleDarkMode()"
         matTooltip="{{ darkMode ? 'Switch to Light mode' : 'Switch to Dark mode' }}"

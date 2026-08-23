@@ -228,6 +228,16 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
     this.applyFilter({ searchQuery: this.searchQuery, topics: this.selectedTopics });
   }
 
+  getSentimentClass(label: string): string {
+    const lower = label.toLowerCase();
+    if (lower.includes('bullish')) {
+      return 'bg-emerald-500/90 text-white';
+    } else if (lower.includes('bearish')) {
+      return 'bg-red-500/90 text-white';
+    }
+    return 'bg-slate-500/90 text-white';
+  }
+
   getTopicIcon(topic: string): string {
     const iconMap: Record<string, string> = {
       'Finance': 'account_balance',

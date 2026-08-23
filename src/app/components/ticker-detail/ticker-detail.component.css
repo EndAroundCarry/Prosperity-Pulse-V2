@@ -1,0 +1,319 @@
+.ticker-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px 24px 48px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: #64748b;
+  text-decoration: none;
+  margin-bottom: 16px;
+  transition: color 0.15s;
+}
+
+.back-link:hover {
+  color: #3b82f6;
+}
+
+/* ── Price header ── */
+.price-header {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 1rem;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+:host-context(.dark-mode) .price-header {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.price-header-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.symbol-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.symbol-ticker {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+:host-context(.dark-mode) .symbol-ticker {
+  color: #f1f5f9;
+}
+
+.symbol-name {
+  font-size: 1rem;
+  color: #64748b;
+}
+
+.symbol-sector {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+}
+
+.current-price {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+:host-context(.dark-mode) .current-price {
+  color: #f1f5f9;
+}
+
+.price-change {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.price-change.positive {
+  color: #16a34a;
+}
+
+.price-change.negative {
+  color: #dc2626;
+}
+
+:host-context(.dark-mode) .price-change.positive {
+  color: #4ade80;
+}
+
+:host-context(.dark-mode) .price-change.negative {
+  color: #f87171;
+}
+
+.change-arrow {
+  font-size: 0.75rem;
+}
+
+.price-asof {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+
+.sparkline-block {
+  display: flex;
+  align-items: center;
+}
+
+.queued-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  color: #92400e;
+}
+
+:host-context(.dark-mode) .queued-notice {
+  background: #78350f;
+  border-color: #92400e;
+  color: #fcd34d;
+}
+
+/* ── Sections ── */
+.section-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 12px;
+}
+
+:host-context(.dark-mode) .section-title {
+  color: #e2e8f0;
+}
+
+.stats-section,
+.description-section,
+.earnings-section {
+  margin-bottom: 20px;
+}
+
+/* ── Stats grid ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+:host-context(.dark-mode) .stat-card {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+.stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+:host-context(.dark-mode) .stat-value {
+  color: #f1f5f9;
+}
+
+/* ── Description ── */
+.description-text {
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+:host-context(.dark-mode) .description-text {
+  color: #94a3b8;
+}
+
+/* ── Earnings table ── */
+.earnings-table-wrap {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:host-context(.dark-mode) .earnings-table-wrap {
+  border-color: #334155;
+}
+
+.earnings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.earnings-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+:host-context(.dark-mode) .earnings-table th {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.earnings-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  font-variant-numeric: tabular-nums;
+}
+
+:host-context(.dark-mode) .earnings-table td {
+  border-color: #1e293b;
+  color: #e2e8f0;
+}
+
+.positive {
+  color: #16a34a;
+}
+
+.negative {
+  color: #dc2626;
+}
+
+.beat-badge {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+}
+
+.miss-badge {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.na-badge {
+  color: #94a3b8;
+}
+
+/* ── No data notice ── */
+.no-data-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.no-data-notice .sub {
+  font-size: 0.75rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .ticker-container {
+    padding: 12px 16px 32px;
+  }
+  .price-header-content {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .price-block {
+    text-align: left;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

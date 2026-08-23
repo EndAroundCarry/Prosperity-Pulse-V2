@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, HostListener } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
@@ -6,6 +6,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { Observable } from 'rxjs';
 import { User } from 'firebase/auth';
 import { AuthService } from '../../services/auth.service';
+import { CommandPaletteComponent } from '../command-palette/command-palette.component';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -38,6 +39,14 @@ export class NavbarComponent implements OnInit {
 
   user$: Observable<User | null> = this.authService.currentUser$;
   showProfileMenu = false;
+
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+      event.preventDefault();
+      this.openCommandPalette();
+    }
+  }
 
   ngOnInit(): void {
     const savedMode = window.localStorage.getItem('prosperity-pulse-dark-mode');
@@ -80,6 +89,15 @@ export class NavbarComponent implements OnInit {
 
   closeProfileMenu(): void {
     this.showProfileMenu = false;
+  }
+
+  openCommandPalette(): void {
+    this.dialog.open(CommandPaletteComponent, {
+      width: '560px',
+      maxWidth: '90vw',
+      panelClass: 'command-palette-dialog',
+      hasBackdrop: false,
+    });
   }
 
   getInitials(name?: string | null, email?: string | null): string {

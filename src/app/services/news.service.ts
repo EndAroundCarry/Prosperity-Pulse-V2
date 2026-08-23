@@ -93,6 +93,10 @@ export class NewsService {
             publishedAt: document.publishedAt ?? '',
             authors: Array.isArray(document.authors) ? document.authors : [],
             topics: Array.isArray(document.topics) ? document.topics : [],
+            // Sentiment fields (persisted by ingestion engine)
+            overallSentimentScore: typeof document.overallSentimentScore === 'number' ? document.overallSentimentScore : undefined,
+            overallSentimentLabel: typeof document.overallSentimentLabel === 'string' ? document.overallSentimentLabel : undefined,
+            tickerSentiment: Array.isArray(document.tickerSentiment) ? document.tickerSentiment : undefined,
           };
         })
       )
