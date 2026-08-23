@@ -8,6 +8,20 @@
  */
 
 import { PersistContext } from './alpha-vantage.client';
+import {
+  persistNews,
+  persistMovers,
+  persistTimeSeriesDaily,
+  persistTreasuryYield,
+  persistCryptoDaily,
+  persistMacroIndicator,
+  persistEarningsCalendar,
+  persistIpoCalendar,
+  persistUniverse,
+  persistOnDemandSeriesDaily,
+  persistOnDemandOverview,
+  persistOnDemandEarnings,
+} from './persist-handlers';
 
 export type DatasetTier = 'A' | 'B' | 'C' | 'news' | 'ondemand';
 
@@ -43,8 +57,6 @@ const DIGITAL_CURRENCY_DAILY = 'DIGITAL_CURRENCY_DAILY';
 const OVERVIEW = 'OVERVIEW';
 const EARNINGS = 'EARNINGS';
 const LISTING_STATUS = 'LISTING_STATUS';
-const EARNINGS_CALENDAR = 'EARNINGS_CALENDAR';
-const IPO_CALENDAR = 'IPO_CALENDAR';
 
 // ────────────────────────────────────────────────────────────
 // Sector ETFs (Tier B rotation)
@@ -72,15 +84,57 @@ const EXTRA_ROTATION = [
 ];
 
 // ────────────────────────────────────────────────────────────
-// Placeholder persist stubs — replaced by real implementations
-// in alpha-vantage.client.ts to avoid circular imports.
-// The scheduler calls dataset.persist(); registry just holds
-// the reference set by the client at init time.
+// Persist handler factories
 // ────────────────────────────────────────────────────────────
 
-function noopPersist(_raw: unknown, _ctx: PersistContext): Promise<void> {
-  return Promise.resolve();
+function newsPersist() {
+  return (raw: unknown, ctx: PersistContext) =>
+    persistNews(raw, ctx.firestore);
 }
+
+function moversPersist() {
+  return (raw: unknown, ctx: PersistContext) =>
+    persistMovers(raw, ctx.firestore);
+}
+
+function seriesDailyPersist(symbol: string, assetClass: 'etf' | 'equity' | 'fx' = 'etf') {
+  return (raw: unknown, ctx: PersistContext) =>
+    persistTimeSeriesDaily(raw, symbol, assetClass, ctx.firestore);
+}
+
+function treasuryYieldPersist(id: string) {
+  return (raw: unknown, ctx: PersistContext) =>
+    persistTreasuryYield(raw, id, ctx.firestore);
+}
+
+function cryptoDailyPersist(symbol: string) {
+  return (raw: unknown, ctx: PersistContext) =>
+    persistCryptoDaily(raw, symbol, ctx.firestore);
+}
+
+function macroPersist(indicatorId: string) {
+  return (raw: unknown, ctx: PersistContext) =>
+    persistMacroIndicator(raw, indicatorId, ctx.firestore);
+}
+
+function earningsCalendarPersist() {
+  return (raw: unknown, ctx: PersistContext) =>
+    persistEarningsCalendar(raw, ctx.firestore);
+}
+
+function ipoCalendarPersist() {
+  return (raw: unknown, ctx: PersistContext) =>
+    persistIpoCalendar(raw, ctx.firestore);
+}
+
+function universePersist() {
+  return (raw: unknown, ctx: PersistContext) =>
+    persistUniverse(raw, ctx.firestore);
+}
+
+// ────────────────────────────────────────────────────────────
+// Dataset definitions
+// ────────────────────────────────────────────────────────────
 
 /** News: financial_markets (core, refreshed every 6h) */
 const NEWS_CORE: DatasetDefinition = {
@@ -93,7 +147,7 @@ const NEWS_CORE: DatasetDefinition = {
     limit: '1000',
   },
   format: 'json',
-  persist: noopPersist,
+  persist: newsPersist(),
   label: 'News — Financial Markets',
 };
 
@@ -108,7 +162,7 @@ const NEWS_SECONDARY: DatasetDefinition = {
     limit: '500',
   },
   format: 'json',
-  persist: noopPersist,
+  persist: newsPersist(),
   label: 'News — Earnings/IPO/M&A',
 };
 
@@ -119,19 +173,23 @@ const MOVERS: DatasetDefinition = {
   ttlMs: 12 * 60 * 60 * 1000,
   params: { function: TOP_GAINERS_LOSERS },
   format: 'json',
-  persist: noopPersist,
+  persist: moversPersist(),
   label: 'Top Movers',
 };
 
 /** Index proxy ETFs (Tier A, daily) */
-function indexProxy(sym: string, name: string, proxyFor: string): DatasetDefinition {
+function indexProxy(
+  sym: string,
+  name: string,
+  proxyFor: string
+): DatasetDefinition {
   return {
     id: `series.${sym}`,
     tier: 'A',
     ttlMs: 24 * 60 * 60 * 1000,
     params: { function: TIME_SERIES_DAILY, symbol: sym },
     format: 'json',
-    persist: noopPersist,
+    persist: seriesDailyPersist(sym, 'etf'),
     label: `${sym} — ${name} proxy for ${proxyFor}`,
   };
 }
@@ -149,7 +207,7 @@ function treasuryYield(
     ttlMs: ttlDays * 24 * 60 * 60 * 1000,
     params: { function: TREASURY_YIELD, interval: 'daily', maturity },
     format: 'json',
-    persist: noopPersist,
+    persist: treasuryYieldPersist(id),
     label,
   };
 }
@@ -162,7 +220,7 @@ function cryptoDaily(sym: string, name: string): DatasetDefinition {
     ttlMs: 24 * 60 * 60 * 1000,
     params: { function: DIGITAL_CURRENCY_DAILY, symbol: sym, market: 'USD' },
     format: 'json',
-    persist: noopPersist,
+    persist: cryptoDailyPersist(sym),
     label: `${name} (${sym})`,
   };
 }
@@ -175,7 +233,7 @@ const SECTOR_DATASETS: DatasetDefinition[] = [
     ttlMs: 5 * 24 * 60 * 60 * 1000,
     params: { function: TIME_SERIES_DAILY, symbol: e.symbol },
     format: 'json' as const,
-    persist: noopPersist,
+    persist: seriesDailyPersist(e.symbol, 'etf'),
     rotationGroup: 'sector_etfs',
     label: `${e.name} sector (${e.symbol})`,
   })),
@@ -188,10 +246,7 @@ const SECTOR_DATASETS: DatasetDefinition[] = [
     tier: 'B' as DatasetTier,
     ttlMs: 5 * 24 * 60 * 60 * 1000,
     params: e.fx
-      ? {
-          function: TIME_SERIES_DAILY,
-          symbol: e.symbol,
-        }
+      ? { function: TIME_SERIES_DAILY, symbol: e.symbol }
       : {
           function: e.symbol.startsWith('ETH')
             ? DIGITAL_CURRENCY_DAILY
@@ -201,7 +256,12 @@ const SECTOR_DATASETS: DatasetDefinition[] = [
             : { symbol: e.symbol }),
         },
     format: 'json' as const,
-    persist: noopPersist,
+    persist: e.symbol.startsWith('ETH')
+      ? cryptoDailyPersist(e.symbol.split('-')[0])
+      : seriesDailyPersist(
+          e.symbol,
+          e.fx ? 'fx' : 'etf'
+        ),
     rotationGroup: 'sector_etfs',
     label: e.name,
   })),
@@ -216,7 +276,7 @@ const MACRO_DATASETS: DatasetDefinition[] = [
     ttlMs: 7 * 24 * 60 * 60 * 1000,
     params: { function: 'CPI', interval: 'monthly' },
     format: 'json',
-    persist: noopPersist,
+    persist: macroPersist('macro.cpi'),
     rotationGroup: 'macro',
     label: 'CPI / Inflation',
   },
@@ -226,7 +286,7 @@ const MACRO_DATASETS: DatasetDefinition[] = [
     ttlMs: 7 * 24 * 60 * 60 * 1000,
     params: { function: 'UNEMPLOYMENT' },
     format: 'json',
-    persist: noopPersist,
+    persist: macroPersist('macro.unemployment'),
     rotationGroup: 'macro',
     label: 'Unemployment Rate',
   },
@@ -236,7 +296,7 @@ const MACRO_DATASETS: DatasetDefinition[] = [
     ttlMs: 7 * 24 * 60 * 60 * 1000,
     params: { function: 'FEDERAL_FUNDS_RATE' },
     format: 'json',
-    persist: noopPersist,
+    persist: macroPersist('macro.fed_funds'),
     rotationGroup: 'macro',
     label: 'Federal Funds Rate',
   },
@@ -246,7 +306,7 @@ const MACRO_DATASETS: DatasetDefinition[] = [
     ttlMs: 7 * 24 * 60 * 60 * 1000,
     params: { function: 'REAL_GDP', interval: 'quarterly' },
     format: 'json',
-    persist: noopPersist,
+    persist: macroPersist('macro.gdp'),
     rotationGroup: 'macro',
     label: 'Real GDP',
   },
@@ -256,7 +316,7 @@ const MACRO_DATASETS: DatasetDefinition[] = [
     ttlMs: 7 * 24 * 60 * 60 * 1000,
     params: { function: 'RETAIL_SALES' },
     format: 'json',
-    persist: noopPersist,
+    persist: macroPersist('macro.retail_sales'),
     rotationGroup: 'macro',
     label: 'Retail Sales',
   },
@@ -268,18 +328,18 @@ const CALENDAR_DATASETS: DatasetDefinition[] = [
     id: 'calendar.earnings',
     tier: 'C',
     ttlMs: 7 * 24 * 60 * 60 * 1000,
-    params: { function: EARNINGS_CALENDAR },
+    params: { function: 'EARNINGS_CALENDAR' },
     format: 'csv',
-    persist: noopPersist,
+    persist: earningsCalendarPersist(),
     label: 'Earnings Calendar',
   },
   {
     id: 'calendar.ipo',
     tier: 'C',
     ttlMs: 7 * 24 * 60 * 60 * 1000,
-    params: { function: IPO_CALENDAR },
+    params: { function: 'IPO_CALENDAR' },
     format: 'csv',
-    persist: noopPersist,
+    persist: ipoCalendarPersist(),
     label: 'IPO Calendar',
   },
 ];
@@ -291,7 +351,7 @@ const UNIVERSE: DatasetDefinition = {
   ttlMs: 30 * 24 * 60 * 60 * 1000,
   params: { function: LISTING_STATUS },
   format: 'csv',
-  persist: noopPersist,
+  persist: universePersist(),
   label: 'Stock Universe (all US symbols)',
 };
 
@@ -307,7 +367,7 @@ export function onDemandSeriesDaily(symbol: string): DatasetDefinition {
     ttlMs: 24 * 60 * 60 * 1000,
     params: { function: TIME_SERIES_DAILY, symbol },
     format: 'json',
-    persist: noopPersist,
+    persist: (raw, ctx) => persistOnDemandSeriesDaily(raw, symbol, ctx.firestore),
     label: `On-demand: ${symbol} daily series`,
   };
 }
@@ -319,7 +379,7 @@ export function onDemandOverview(symbol: string): DatasetDefinition {
     ttlMs: 24 * 60 * 60 * 1000,
     params: { function: OVERVIEW, symbol },
     format: 'json',
-    persist: noopPersist,
+    persist: (raw, ctx) => persistOnDemandOverview(raw, symbol, ctx.firestore),
     label: `On-demand: ${symbol} overview`,
   };
 }
@@ -331,7 +391,7 @@ export function onDemandEarnings(symbol: string): DatasetDefinition {
     ttlMs: 24 * 60 * 60 * 1000,
     params: { function: EARNINGS, symbol },
     format: 'json',
-    persist: noopPersist,
+    persist: (raw, ctx) => persistOnDemandEarnings(raw, symbol, ctx.firestore),
     label: `On-demand: ${symbol} earnings`,
   };
 }

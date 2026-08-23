@@ -22,6 +22,8 @@ const API_URL = 'https://www.alphavantage.co/query';
 export interface PersistContext {
   /** The dataset that was fetched (for stamping state after persist) */
   dataset: DatasetDefinition;
+  /** Firestore instance for writing documents */
+  firestore: import('@angular/fire/firestore').Firestore;
 }
 
 export interface FetchResult {

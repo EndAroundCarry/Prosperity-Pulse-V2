@@ -153,7 +153,7 @@ export class IngestionSchedulerService {
       // 9. Handle result
       if (result.ok) {
         // Persist data
-        const ctx: PersistContext = { dataset: winner.dataset };
+        const ctx: PersistContext = { dataset: winner.dataset, firestore: this.firestore };
         try {
           await winner.dataset.persist(result.data, ctx);
         } catch (err) {

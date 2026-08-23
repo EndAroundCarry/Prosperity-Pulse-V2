@@ -1,0 +1,356 @@
+<!--
+  Dashboard — the market dashboard at `/`
+  10 sections as specified in Phase 4 of the build plan.
+-->
+
+<div class="dashboard-container">
+  <!-- 1. Market status strip -->
+  <div class="status-strip">
+    <div class="status-left">
+      <span
+        class="status-dot"
+        [class.open]="getMarketStatus().open"
+        [class.closed]="!getMarketStatus().open"
+      ></span>
+      <span class="status-label">{{ getMarketStatus().label }}</span>
+    </div>
+    <div class="status-right">
+      <span class="freshness">
+        @if (snapshot.asOf) {
+          Data as of {{ snapshot.asOf | date:'mediumDate' }} · end-of-day
+        } @else {
+          Awaiting first data fetch
+        }
+      </span>
+    </div>
+  </div>
+
+  <!-- 2. Index row -->
+  <section class="widget-section">
+    <div class="tile-grid four-col">
+      @for (symbol of indexSymbols; track trackBySymbol($index, symbol)) {
+        @if (getQuote(symbol); as quote) {
+          <pp-quote-tile
+            [snapshot]="quote"
+            [displayName]="symbolLabels[symbol] || symbol"
+          />
+        } @else if (snapshotLoaded) {
+          <pp-widget-card
+            [title]="symbolLabels[symbol] || symbol"
+            [empty]="true"
+            emptyMessage="Awaiting first fetch"
+          />
+        } @else {
+          <pp-skeleton shape="rect" height="120px" />
+        }
+      }
+    </div>
+  </section>
+
+  <!-- 3. Sector heatmap -->
+  <section class="widget-section">
+    <pp-widget-card title="Sector Heatmap" icon="grid_view">
+      <div class="sector-grid">
+        @for (entry of sectorEfts; track entry[0]) {
+          @if (getQuote(entry[0]); as quote) {
+            <a
+              [routerLink]="['/ticker', entry[0]]"
+              class="sector-tile"
+              [class.positive]="quote.changePercent >= 0"
+              [class.negative]="quote.changePercent < 0"
+              [attr.aria-label]="entry[1] + ' sector, ' + formatPrice(quote.price) + ' dollars, ' + (quote.changePercent >= 0 ? 'up' : 'down') + ' ' + quote.changePercent.toFixed(2) + ' percent'"
+            >
+              <span class="sector-name">{{ entry[1] }}</span>
+              <span class="sector-ticker">{{ entry[0] }}</span>
+              <span class="sector-change">
+                {{ quote.changePercent >= 0 ? '▲' : '▼' }}
+                {{ formatPrice(quote.changePercent) }}%
+              </span>
+              <span class="sector-asof">as of {{ quote.asOf }}</span>
+            </a>
+          } @else if (snapshotLoaded) {
+            <div class="sector-tile empty-tile">
+              <span class="sector-name">{{ entry[1] }}</span>
+              <span class="sector-ticker">{{ entry[0] }}</span>
+              <span class="sector-change">—</span>
+            </div>
+          } @else {
+            <pp-skeleton shape="rect" height="80px" />
+          }
+        }
+      </div>
+    </pp-widget-card>
+  </section>
+
+  <!-- 4. Top movers -->
+  <section class="widget-section">
+    <pp-widget-card
+      title="Top Movers"
+      icon="trending_up"
+      [asOf]="formatMoversDate()"
+      [stale]="true"
+    >
+      @if (!moversLoaded) {
+        <div class="skeleton-row">
+          @for (i of [1,2,3,4,5]; track i) {
+            <pp-skeleton shape="rect" height="36px" />
+          }
+        </div>
+      } @else {
+        <div class="mover-tabs">
+          <button
+            class="mover-tab"
+            [class.active]="activeMoverTab === 'gainers'"
+            (click)="activeMoverTab = 'gainers'"
+          >Gainers</button>
+          <button
+            class="mover-tab"
+            [class.active]="activeMoverTab === 'losers'"
+            (click)="activeMoverTab = 'losers'"
+          >Losers</button>
+          <button
+            class="mover-tab"
+            [class.active]="activeMoverTab === 'active'"
+            (click)="activeMoverTab = 'active'"
+          >Most Active</button>
+        </div>
+        <div class="mover-list">
+          @for (mover of getMoversList(); track mover.symbol; let i = $index) {
+            @if (i < 10) {
+              <a
+                [routerLink]="['/ticker', mover.symbol]"
+                class="mover-row"
+              >
+                <span class="mover-rank">{{ i + 1 }}</span>
+                <span class="mover-symbol">{{ mover.symbol }}</span>
+                <span class="mover-price">{{ formatMoverPrice(mover.price) }}</span>
+                <span
+                  class="mover-change"
+                  [class.positive]="mover.changePercent >= 0"
+                  [class.negative]="mover.changePercent < 0"
+                >
+                  {{ mover.changePercent >= 0 ? '▲' : '▼' }}
+                  {{ formatMoverPercent(mover.changePercent) }}
+                </span>
+                <span class="mover-volume">Vol {{ formatVolume(mover.volume) }}</span>
+              </a>
+            }
+          }
+          @if (getMoversList().length === 0) {
+            <div class="mover-empty">No mover data available yet</div>
+          }
+        </div>
+      }
+    </pp-widget-card>
+  </section>
+
+  <!-- 5. Cross-asset strip -->
+  <section class="widget-section">
+    <div class="tile-grid three-col">
+      @for (symbol of cryptoSymbols; track trackBySymbol($index, symbol)) {
+        @if (getQuote(symbol); as quote) {
+          <pp-quote-tile
+            [snapshot]="quote"
+            [displayName]="symbolLabels[symbol] || symbol"
+          />
+        } @else if (snapshotLoaded) {
+          <pp-widget-card [title]="symbolLabels[symbol] || symbol" [empty]="true" />
+        } @else {
+          <pp-skeleton shape="rect" height="120px" />
+        }
+      }
+      @for (symbol of fxSymbols; track trackBySymbol($index, symbol)) {
+        @if (getQuote(symbol); as quote) {
+          <pp-quote-tile
+            [snapshot]="quote"
+            [displayName]="symbolLabels[symbol] || symbol"
+          />
+        } @else if (snapshotLoaded) {
+          <pp-widget-card [title]="symbolLabels[symbol] || symbol" [empty]="true" />
+        } @else {
+          <pp-skeleton shape="rect" height="120px" />
+        }
+      }
+      @for (symbol of commoditySymbols; track trackBySymbol($index, symbol)) {
+        @if (getQuote(symbol); as quote) {
+          <pp-quote-tile
+            [snapshot]="quote"
+            [displayName]="symbolLabels[symbol] || symbol"
+          />
+        } @else if (snapshotLoaded) {
+          <pp-widget-card [title]="symbolLabels[symbol] || symbol" [empty]="true" />
+        } @else {
+          <pp-skeleton shape="rect" height="120px" />
+        }
+      }
+    </div>
+  </section>
+
+  <!-- 6. Rates & yield curve -->
+  <section class="widget-section">
+    <pp-widget-card
+      title="Rates & Yield Curve"
+      icon="candlestick_chart"
+      infoTooltip="Treasury yields are key indicators of economic outlook. An inverted curve (short-term higher than long-term) historically signals recession risk."
+    >
+      <div class="rates-row">
+        @for (symbol of rateSymbols; track trackBySymbol($index, symbol)) {
+          @if (getQuote(symbol); as quote) {
+            <div class="rate-item">
+              <span class="rate-label">{{ symbolLabels[symbol] || symbol }}</span>
+              <span class="rate-value">{{ formatPrice(quote.price) }}%</span>
+              <span
+                class="rate-change"
+                [class.positive]="quote.changePercent >= 0"
+                [class.negative]="quote.changePercent < 0"
+              >
+                {{ quote.changePercent >= 0 ? '▲' : '▼' }}
+                {{ formatPrice(quote.changePercent) }}%
+              </span>
+            </div>
+          } @else if (snapshotLoaded) {
+            <div class="rate-item">
+              <span class="rate-label">{{ symbolLabels[symbol] || symbol }}</span>
+              <span class="rate-value">—</span>
+            </div>
+          }
+        }
+        @if (getYieldSpread(); as spread) {
+          <div class="rate-item yield-spread" [class.inverted]="isYieldCurveInverted()">
+            <span class="rate-label">10Y−2Y Spread</span>
+            <span class="rate-value">{{ spread >= 0 ? '+' : '' }}{{ spread.toFixed(2) }}%</span>
+            @if (isYieldCurveInverted()) {
+              <span class="inversion-badge">⚠ Inverted</span>
+            }
+          </div>
+        }
+      </div>
+      @if (isYieldCurveInverted()) {
+        <div class="yield-note">
+          An inverted yield curve means short-term bonds pay more than long-term bonds.
+          Historically, this has preceded every U.S. recession in the past 50 years.
+        </div>
+      }
+    </pp-widget-card>
+  </section>
+
+  <!-- 7. Macro pulse -->
+  <section class="widget-section">
+    <pp-widget-card title="Macro Pulse" icon="analytics" infoTooltip="Key economic indicators updated weekly or monthly from official government data.">
+      <div class="macro-grid">
+        @for (id of ['macro.cpi', 'macro.unemployment', 'macro.fed_funds', 'macro.gdp', 'macro.retail_sales']; track id) {
+          @if (getLatestMacroPoint(id); as point) {
+            <div class="macro-item">
+              <mat-icon class="macro-icon">{{ getMacroIcon(id) }}</mat-icon>
+              <div class="macro-info">
+                <span class="macro-label">{{ getMacroLabel(id) }}</span>
+                <span class="macro-value">{{ point.value }} <small>{{ getMacroUnit(id) }}</small></span>
+                <span class="macro-detail">Prior: {{ point.prior }} · {{ formatDateShort(point.date) }}</span>
+              </div>
+            </div>
+          } @else if (macroLoaded) {
+            <div class="macro-item empty-macro">
+              <mat-icon class="macro-icon">{{ getMacroIcon(id) }}</mat-icon>
+              <div class="macro-info">
+                <span class="macro-label">{{ getMacroLabel(id) }}</span>
+                <span class="macro-value">Awaiting data</span>
+              </div>
+            </div>
+          } @else {
+            <div class="macro-item">
+              <pp-skeleton shape="rect" width="100%" height="48px" />
+            </div>
+          }
+        }
+      </div>
+    </pp-widget-card>
+  </section>
+
+  <!-- 8. Market sentiment gauge (placeholder — derived from news data in Phase 8) -->
+  <section class="widget-section">
+    <pp-widget-card
+      title="Market Sentiment"
+      icon="psychology"
+      infoTooltip="Aggregate sentiment from the last 24h of financial news. Zero additional API cost — derived from data already being fetched."
+    >
+      <div class="sentiment-placeholder">
+        <mat-icon>construction</mat-icon>
+        <span>Sentiment analysis will be computed from news data in a future update.</span>
+      </div>
+    </pp-widget-card>
+  </section>
+
+  <!-- 9. News rail -->
+  <section class="widget-section">
+    <pp-widget-card title="Latest News" icon="article" [empty]="newsLoaded && newsArticles.length === 0">
+      <div class="news-rail">
+        @for (article of newsArticles; track article.id) {
+          <a
+            class="news-card"
+            [routerLink]="['/news-feed']"
+          >
+            @if (article.imageUrl) {
+              <img
+                [src]="article.imageUrl"
+                [alt]="article.title"
+                class="news-thumb"
+                loading="lazy"
+              />
+            }
+            <div class="news-info">
+              <span class="news-source">{{ article.sourceName }}</span>
+              <span class="news-title">{{ article.title }}</span>
+              <span class="news-time">{{ article.publishedAt | date:'short' }}</span>
+            </div>
+          </a>
+        }
+      </div>
+      <div class="news-footer">
+        <a routerLink="/news-feed" class="view-all">View all news →</a>
+      </div>
+    </pp-widget-card>
+  </section>
+
+  <!-- 10. Upcoming: earnings + IPOs -->
+  <section class="widget-section two-col">
+    <pp-widget-card
+      title="Upcoming Earnings"
+      icon="event"
+      [asOf]="formatFetchedDate(earningsCal?.fetchedAt)"
+      [empty]="earningsLoaded && (!earningsCal?.events || earningsCal!.events.length === 0)"
+    >
+      <div class="upcoming-list">
+        @for (event of earningsCal?.events?.slice(0, 5); track event.symbol + event.reportDate) {
+          <div class="upcoming-row">
+            <a [routerLink]="['/ticker', event.symbol]" class="upcoming-symbol">{{ event.symbol }}</a>
+            <span class="upcoming-name">{{ event.name }}</span>
+            <span class="upcoming-date">{{ formatDateShort(event.reportDate) }}</span>
+          </div>
+        }
+      </div>
+    </pp-widget-card>
+
+    <pp-widget-card
+      title="Upcoming IPOs"
+      icon="rocket_launch"
+      [asOf]="formatFetchedDate(ipoCal?.fetchedAt)"
+      [empty]="ipoLoaded && (!ipoCal?.events || ipoCal!.events.length === 0)"
+    >
+      <div class="upcoming-list">
+        @for (event of ipoCal?.events?.slice(0, 5); track event.symbol + event.ipoDate) {
+          <div class="upcoming-row">
+            <span class="upcoming-symbol">{{ event.symbol }}</span>
+            <span class="upcoming-name">{{ event.name }}</span>
+            <span class="upcoming-date">{{ formatDateShort(event.ipoDate) }}</span>
+            <span class="upcoming-exchange">{{ event.exchange }}</span>
+          </div>
+        }
+      </div>
+    </pp-widget-card>
+  </section>
+
+  <!-- Footer disclaimer -->
+  <div class="dashboard-footer">
+    <p>Not investment advice · End-of-day data · Powered by Alpha Vantage</p>
+  </div>
+</div>

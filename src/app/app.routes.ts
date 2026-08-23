@@ -1,10 +1,29 @@
 import { Routes } from '@angular/router';
-import { UserProfileComponent } from './components/user-profile/user-profile.component';
-import { NewsFeedComponent } from './components/news-feed/news-feed.component';
-import { HomeComponent } from './components/home/home/home.component';
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent },
-  { path: 'news-feed', component: NewsFeedComponent },
-  { path: 'profile', component: UserProfileComponent }
+  {
+    path: '',
+    loadComponent: () =>
+      import('./components/dashboard/dashboard.component').then(
+        (m) => m.DashboardComponent
+      ),
+  },
+  {
+    path: 'news-feed',
+    loadComponent: () =>
+      import('./components/news-feed/news-feed.component').then(
+        (m) => m.NewsFeedComponent
+      ),
+  },
+  {
+    path: 'profile',
+    loadComponent: () =>
+      import('./components/user-profile/user-profile.component').then(
+        (m) => m.UserProfileComponent
+      ),
+  },
+  {
+    path: '**',
+    redirectTo: '',
+  },
 ];
