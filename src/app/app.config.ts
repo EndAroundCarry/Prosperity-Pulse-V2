@@ -1,5 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 import { getAuth, provideAuth } from '@angular/fire/auth';
@@ -8,6 +8,7 @@ import { provideRouter, withDebugTracing } from '@angular/router';
 
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
+import { IngestionSchedulerService } from './core/ingestion/ingestion-scheduler.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -23,5 +24,12 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAuth(() => getAuth()),
     provideFirestore(() => getFirestore()),
+    // Phase 1: the in-client ingestion scheduler starts on bootstrap. It is
+    // wired via an app initializer (not a service constructor) so injecting
+    // a service never fires network traffic on its own.
+    provideAppInitializer(() => {
+      const scheduler = inject(IngestionSchedulerService);
+      scheduler.start();
+    }),
   ],
 };

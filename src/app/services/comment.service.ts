@@ -15,6 +15,7 @@ import {
 import { Observable, combineLatest, map, of, catchError } from 'rxjs';
 import { CommentItem, ArticleReaction, ArticleEngagementStats } from '../models/comment.model';
 import { NewsArticle } from '../models/news-article.model';
+import { buildArticleDocId } from '../core/article-id.util';
 
 @Injectable({
   providedIn: 'root',
@@ -87,18 +88,7 @@ export class CommentService {
    * Generates a deterministic unique key for an article based on source, title, and published date.
    */
   getArticleKey(article: NewsArticle): string {
-    const titleSlug = (article.title || 'article')
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-    const sourceSlug = (article.sourceName || 'source')
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-    const dateSlug = article.publishedAt ? article.publishedAt.slice(0, 10) : 'unknown';
-    return `${sourceSlug}-${titleSlug}-${dateSlug}`.slice(0, 120);
+    return buildArticleDocId(article);
   }
 
   /**
