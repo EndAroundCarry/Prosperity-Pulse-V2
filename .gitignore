@@ -41,3 +41,12 @@ testem.log
 .DS_Store
 Thumbs.db
 .aider*
+.commandcode*
+.freebuff*
+
+# Environment secrets (never commit real keys)
+# Copy src/environments/environment.example.ts to environment.ts and
+# environment.prod.ts with real values. The example is committed so a
+# fresh clone builds.
+/src/environments/environment.ts
+/src/environments/environment.prod.ts
