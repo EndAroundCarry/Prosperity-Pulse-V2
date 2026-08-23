@@ -1,6 +1,29 @@
 @import "tailwindcss";
 @import "@angular/material/prebuilt-themes/azure-blue.css";
 
+/* Tailwind v4: make the `dark:` variant follow the .dark-mode class toggle
+   (the app toggles document.body.classList, not the OS scheme). */
+@custom-variant dark (&:where(.dark-mode, .dark-mode *));
+
+/* Chart palette — one source of truth for both Tailwind and ECharts themes. */
+:root {
+  --pp-chart-grid: #e2e8f0;
+  --pp-chart-axis: #64748b;
+  --pp-chart-up: #0891b2;
+  --pp-chart-down: #f97316;
+  --pp-chart-neutral: #94a3b8;
+  --pp-chart-primary: #2563eb;
+}
+
+.dark-mode {
+  --pp-chart-grid: #1e293b;
+  --pp-chart-axis: #94a3b8;
+  --pp-chart-up: #22d3ee;
+  --pp-chart-down: #fb923c;
+  --pp-chart-neutral: #64748b;
+  --pp-chart-primary: #60a5fa;
+}
+
 /* Base & Typography */
 html,
 body {
@@ -54,51 +77,14 @@ body.dark-mode .page-shell {
   color: #f8fafc;
 }
 
-body.dark-mode .news-card {
-  background-color: #0f172a;
-  color: #f8fafc;
-  border-color: #1e293b;
+body.dark-mode .mat-mdc-dialog-container .mat-mdc-dialog-surface {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #1e293b !important;
 }
 
-body.dark-mode .page-shell .text-slate-900,
-body.dark-mode .page-shell .text-slate-950 {
-  color: #f8fafc;
-}
-
-body.dark-mode .page-shell .text-slate-800 {
-  color: #f1f5f9;
-}
-
-body.dark-mode .page-shell .text-slate-700 {
-  color: #e2e8f0;
-}
-
-body.dark-mode .page-shell .text-slate-600 {
-  color: #cbd5e1;
-}
-
-body.dark-mode .page-shell .text-slate-500 {
-  color: #94a3b8;
-}
-
-body.dark-mode .page-shell .text-slate-400 {
-  color: #64748b;
-}
-
-body.dark-mode .page-shell .bg-white {
-  background-color: #0f172a;
-}
-
-body.dark-mode .page-shell .bg-slate-50 {
-  background-color: #020617;
-}
-
-body.dark-mode .page-shell .bg-slate-100 {
-  background-color: #1e293b;
-}
-
-body.dark-mode .page-shell .border-slate-200 {
-  border-color: #1e293b;
+body.dark-mode .mat-mdc-text-field-wrapper {
+  background-color: rgba(15, 23, 42, 0.6) !important;
 }
 
 /* Material Design 3 Dialog Refinements */
@@ -106,12 +92,6 @@ body.dark-mode .page-shell .border-slate-200 {
   border-radius: 28px !important;
   overflow: hidden !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-}
-
-body.dark-mode .mat-mdc-dialog-container .mat-mdc-dialog-surface {
-  background-color: #0f172a !important;
-  color: #f8fafc !important;
-  border: 1px solid #1e293b !important;
 }
 
 .news-detail-dialog .mat-mdc-dialog-surface {
@@ -147,10 +127,6 @@ body.dark-mode .mat-mdc-dialog-container .mat-mdc-dialog-surface {
 
 .mat-mdc-form-field .mdc-notched-outline__trailing {
   border-left: none !important;
-}
-
-body.dark-mode .mat-mdc-text-field-wrapper {
-  background-color: rgba(15, 23, 42, 0.6) !important;
 }
 
 /* Material Chips */

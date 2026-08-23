@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { AsyncPipe, CommonModule } from '@angular/common';
+import { ThemeService } from '../../core/theme.service';
 
 @Component({
   selector: 'app-navbar',
@@ -30,8 +31,9 @@ import { AsyncPipe, CommonModule } from '@angular/common';
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.css'],
 })
-export class NavbarComponent implements OnInit {
-  darkMode = false;
+export class NavbarComponent {
+  readonly themeService = inject(ThemeService);
+  readonly darkMode = this.themeService.isDark();
   private readonly dialog = inject(MatDialog);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
@@ -39,15 +41,8 @@ export class NavbarComponent implements OnInit {
   user$: Observable<User | null> = this.authService.currentUser$;
   showProfileMenu = false;
 
-  ngOnInit(): void {
-    const savedMode = window.localStorage.getItem('prosperity-pulse-dark-mode');
-    this.darkMode = savedMode === 'true';
-    this.applyTheme(this.darkMode);
-  }
-
   toggleDarkMode(): void {
-    this.darkMode = !this.darkMode;
-    this.applyTheme(this.darkMode);
+    this.themeService.toggle();
   }
 
   openLoginDialog(): void {
@@ -67,11 +62,6 @@ export class NavbarComponent implements OnInit {
     this.showProfileMenu = false;
     await this.authService.logout();
     this.router.navigate(['/']);
-  }
-
-  private applyTheme(enabled: boolean): void {
-    document.body.classList.toggle('dark-mode', enabled);
-    window.localStorage.setItem('prosperity-pulse-dark-mode', String(enabled));
   }
 
   toggleProfileMenu(): void {

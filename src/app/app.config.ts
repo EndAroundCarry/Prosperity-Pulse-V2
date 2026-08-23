@@ -5,6 +5,7 @@ import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 import { getAuth, provideAuth } from '@angular/fire/auth';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, withDebugTracing } from '@angular/router';
+import { provideEchartsCore } from 'ngx-echarts';
 
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
@@ -24,6 +25,8 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAuth(() => getAuth()),
     provideFirestore(() => getFirestore()),
+    // Phase 3: lazy-loaded tree-shaken ECharts core (avoid ~1MB initial bundle).
+    provideEchartsCore({ echarts: () => import('./shared/charts/echarts-core') }),
     // Phase 1: the in-client ingestion scheduler starts on bootstrap. It is
     // wired via an app initializer (not a service constructor) so injecting
     // a service never fires network traffic on its own.

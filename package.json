@@ -22,6 +22,8 @@
     "@angular/platform-browser-dynamic": "^19.2.0",
     "@angular/router": "^19.2.0",
     "@tailwindcss/postcss": "^4.3.2",
+    "echarts": "^6.1.0",
+    "ngx-echarts": "^19.0.0",
     "postcss": "^8.5.16",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.3.2",
