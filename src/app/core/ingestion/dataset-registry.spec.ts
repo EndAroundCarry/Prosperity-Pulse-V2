@@ -1,4 +1,4 @@
-import { buildDatasetRegistry, PersistContext } from './dataset-registry';
+import { buildDatasetRegistry, PersistContext, DASHBOARD_DOC_PATH } from './dataset-registry';
 
 function makeContext(): { ctx: PersistContext; writes: Map<string, Record<string, unknown>> } {
   const writes = new Map<string, Record<string, unknown>>();
@@ -7,7 +7,7 @@ function makeContext(): { ctx: PersistContext; writes: Map<string, Record<string
       writes.set(path, data);
     },
     deleteDoc: async () => undefined,
-    getDoc: async () => null,
+    getDoc: async (path) => writes.get(path) ?? null,
     now: () => new Date('2026-08-23T12:00:00Z'),
   };
   return { ctx, writes };
@@ -92,6 +92,40 @@ describe('dataset registry', () => {
     expect(candles[0].date).toBe('2026-08-19');
     expect(candles[1].close).toBe(108);
     expect(doc['asOf']).toBe('2026-08-20');
+
+    // Dashboard snapshot written with the tile, proxy label, and sparkline.
+    const dash = writes.get(DASHBOARD_DOC_PATH)!;
+    const quotes = dash['quotes'] as Array<Record<string, unknown>>;
+    expect(quotes.length).toBe(1);
+    expect(quotes[0]['symbol']).toBe('SPY');
+    expect(quotes[0]['name']).toBe('S&P 500');
+    expect(quotes[0]['proxyFor']).toBe('S&P 500');
+    expect(quotes[0]['price']).toBe(108);
+    expect(quotes[0]['changePercent']).toBe(8);
+    expect(quotes[0]['asOf']).toBe('2026-08-20');
+    expect((quotes[0]['sparkline'] as number[]).length).toBe(2);
+  });
+
+  it('a second series persist merges into the dashboard without wiping the first', async () => {
+    const registry = buildDatasetRegistry();
+    const spy = registry.find((d) => d.id === 'series.SPY')!;
+    const qqq = registry.find((d) => d.id === 'series.QQQ')!;
+    const { ctx, writes } = makeContext();
+
+    const seriesPayload = (symbol: string, close: string) => ({
+      'Meta Data': { '2. Symbol': symbol },
+      'Time Series (Daily)': {
+        '2026-08-20': { '1. open': '1', '2. high': '2', '3. low': '0.5', '4. close': close, '5. volume': '10' },
+      },
+    });
+
+    await spy.persist(seriesPayload('SPY', '108'), ctx);
+    await qqq.persist(seriesPayload('QQQ', '540'), ctx);
+
+    const dash = writes.get(DASHBOARD_DOC_PATH)!;
+    const quotes = dash['quotes'] as Array<Record<string, unknown>>;
+    expect(quotes.length).toBe(2);
+    expect(quotes.map((q) => q['symbol'])).toEqual(['SPY', 'QQQ']);
   });
 
   it('macro persist writes a macro doc', async () => {

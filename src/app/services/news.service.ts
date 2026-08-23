@@ -84,8 +84,16 @@ export class NewsService {
             sourceUrl: document.sourceUrl ?? '#',
             sourceName: document.sourceName ?? 'Unknown source',
             publishedAt: document.publishedAt ?? '',
+            publishedAtDate: document.publishedAtDate
+              ? new Date(document.publishedAtDate.seconds ? document.publishedAtDate.seconds * 1000 : document.publishedAtDate)
+              : new Date(document.publishedAt ?? 0),
             authors: Array.isArray(document.authors) ? document.authors : [],
             topics: Array.isArray(document.topics) ? document.topics : [],
+            overallSentimentScore:
+              typeof document.overallSentimentScore === 'number' ? document.overallSentimentScore : undefined,
+            overallSentimentLabel: document.overallSentimentLabel ?? undefined,
+            tickerSentiment: Array.isArray(document.tickerSentiment) ? document.tickerSentiment : undefined,
+            topicRelevance: document.topicRelevance ?? undefined,
           };
         })
       )

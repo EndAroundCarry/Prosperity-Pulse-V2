@@ -1,3 +1,10 @@
+import {
+  AssetClass,
+  DashboardSnapshot,
+  QuoteSnapshot,
+} from '../../models/instrument.model';
+import { buildQuoteSnapshot, mergeDashboardSnapshot } from './quote-snapshot.util';
+
 /**
  * The Alpha Vantage dataset registry — the whole budget table as data.
  *
@@ -9,10 +16,10 @@
 
 export type DatasetTier = 'A' | 'B' | 'C' | 'news' | 'ondemand';
 
-/** Where a series doc should live and how it should be tagged. */
+/** Display metadata for a series dataset (drives dashboard tiles). */
 export interface SeriesMeta {
-  assetClass: 'etf' | 'crypto' | 'fx' | 'commodity' | 'rate';
   name: string;
+  assetClass: AssetClass;
   proxyFor?: string;
 }
 
@@ -37,7 +44,40 @@ export interface DatasetDefinition {
   persist: (raw: unknown, ctx: PersistContext) => Promise<void>;
   /** Members of a group share one slot and round-robin. */
   rotationGroup?: string;
+  /** Display metadata for series datasets. */
+  meta?: SeriesMeta;
 }
+
+/**
+ * Display names / asset classes for every symbol the registry tracks.
+ * The dashboard tiles render straight from this, so it must cover each
+ * series dataset's symbol.
+ */
+export const SYMBOL_META: Record<string, SeriesMeta> = {
+  SPY: { name: 'S&P 500', assetClass: 'etf', proxyFor: 'S&P 500' },
+  QQQ: { name: 'Nasdaq 100', assetClass: 'etf', proxyFor: 'Nasdaq 100' },
+  DIA: { name: 'Dow Jones', assetClass: 'etf', proxyFor: 'Dow Jones' },
+  IWM: { name: 'Russell 2000', assetClass: 'etf', proxyFor: 'Russell 2000' },
+  XLK: { name: 'Technology', assetClass: 'etf' },
+  XLF: { name: 'Financials', assetClass: 'etf' },
+  XLE: { name: 'Energy', assetClass: 'etf' },
+  XLV: { name: 'Health Care', assetClass: 'etf' },
+  XLI: { name: 'Industrials', assetClass: 'etf' },
+  XLY: { name: 'Consumer Disc.', assetClass: 'etf' },
+  XLP: { name: 'Consumer Staples', assetClass: 'etf' },
+  XLU: { name: 'Utilities', assetClass: 'etf' },
+  XLB: { name: 'Materials', assetClass: 'etf' },
+  XLRE: { name: 'Real Estate', assetClass: 'etf' },
+  XLC: { name: 'Communication', assetClass: 'etf' },
+  BTC: { name: 'Bitcoin', assetClass: 'crypto' },
+  ETH: { name: 'Ethereum', assetClass: 'crypto' },
+  EURUSD: { name: 'EUR/USD', assetClass: 'fx' },
+  GLD: { name: 'Gold', assetClass: 'commodity' },
+  USO: { name: 'Oil (WTI)', assetClass: 'commodity' },
+};
+
+/** The single denormalized dashboard doc. */
+export const DASHBOARD_DOC_PATH = 'market_snapshot/dashboard';
 
 /** Cached dataset state persisted to Firestore `system/state/datasets/{id}`. */
 export interface DatasetState {
@@ -108,6 +148,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.A,
       params: { function: 'TIME_SERIES_DAILY', symbol: 'SPY', outputsize: 'compact' },
       format: 'json',
+      meta: SYMBOL_META['SPY'],
       persist: persistSeries,
     },
     {
@@ -116,6 +157,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.A,
       params: { function: 'TIME_SERIES_DAILY', symbol: 'QQQ', outputsize: 'compact' },
       format: 'json',
+      meta: SYMBOL_META['QQQ'],
       persist: persistSeries,
     },
     {
@@ -124,14 +166,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.A,
       params: { function: 'TIME_SERIES_DAILY', symbol: 'DIA', outputsize: 'compact' },
       format: 'json',
-      persist: persistSeries,
-    },
-    {
-      id: 'series.IWM',
-      tier: 'A',
-      ttlMs: TTL.A,
-      params: { function: 'TIME_SERIES_DAILY', symbol: 'IWM', outputsize: 'compact' },
-      format: 'json',
+      meta: SYMBOL_META['DIA'],
       persist: persistSeries,
     },
     {
@@ -148,10 +183,40 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.A,
       params: { function: 'DIGITAL_CURRENCY_DAILY', symbol: 'BTC', market: 'USD' },
       format: 'json',
+      meta: SYMBOL_META['BTC'],
       persist: persistCryptoSeries,
     },
-    // ---- Tier B: sector ETFs + a few extras, rotating ----
+    // ---- Tier B: sector ETFs + extras, rotating ----
     ...sectorEtfs(),
+    {
+      id: 'series.IWM',
+      tier: 'B',
+      ttlMs: TTL.B,
+      params: { function: 'TIME_SERIES_DAILY', symbol: 'IWM', outputsize: 'compact' },
+      format: 'json',
+      meta: SYMBOL_META['IWM'],
+      persist: persistSeries,
+    },
+    {
+      id: 'series.GLD',
+      tier: 'B',
+      ttlMs: TTL.B,
+      rotationGroup: 'commodities',
+      params: { function: 'TIME_SERIES_DAILY', symbol: 'GLD', outputsize: 'compact' },
+      format: 'json',
+      meta: SYMBOL_META['GLD'],
+      persist: persistSeries,
+    },
+    {
+      id: 'series.USO',
+      tier: 'B',
+      ttlMs: TTL.B,
+      rotationGroup: 'commodities',
+      params: { function: 'TIME_SERIES_DAILY', symbol: 'USO', outputsize: 'compact' },
+      format: 'json',
+      meta: SYMBOL_META['USO'],
+      persist: persistSeries,
+    },
     {
       id: 'series.ETH',
       tier: 'B',
@@ -159,6 +224,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       rotationGroup: 'crypto-extra',
       params: { function: 'DIGITAL_CURRENCY_DAILY', symbol: 'ETH', market: 'USD' },
       format: 'json',
+      meta: SYMBOL_META['ETH'],
       persist: persistCryptoSeries,
     },
     {
@@ -168,6 +234,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       rotationGroup: 'fx',
       params: { function: 'FX_DAILY', from_symbol: 'EUR', to_symbol: 'USD', outputsize: 'compact' },
       format: 'json',
+      meta: SYMBOL_META['EURUSD'],
       persist: persistFxSeries,
     },
     // ---- Tier C: slow macro ----
@@ -269,6 +336,7 @@ function sectorEtfs(): DatasetDefinition[] {
     rotationGroup: 'sectors',
     params: { function: 'TIME_SERIES_DAILY', symbol, outputsize: 'compact' },
     format: 'json' as const,
+    meta: { name, assetClass: 'etf' as const },
     persist: persistSeries,
   }));
 }
@@ -380,13 +448,21 @@ function persistSeries(raw: unknown, ctx: PersistContext): Promise<void> {
   );
   if (!symbol || candles.length === 0) return Promise.resolve();
 
-  return ctx.setDoc(`market_series/${symbol}`, {
-    symbol,
-    assetClass: 'etf',
-    asOf: candles[candles.length - 1].date,
-    candles,
-    updatedAt: ctx.now().toISOString(),
-  });
+  const meta = SYMBOL_META[symbol] ?? { name: symbol, assetClass: 'etf' as const };
+  const writes: Promise<void>[] = [
+    ctx.setDoc(`market_series/${symbol}`, {
+      symbol,
+      assetClass: meta.assetClass,
+      asOf: candles[candles.length - 1].date,
+      candles,
+      updatedAt: ctx.now().toISOString(),
+    }),
+  ];
+
+  const quote = buildQuoteSnapshot(symbol, meta.name, meta.assetClass, candles, meta.proxyFor);
+  if (quote) writes.push(updateDashboard(ctx, quote));
+
+  return Promise.all(writes).then(() => undefined);
 }
 
 function persistCryptoSeries(raw: unknown, ctx: PersistContext): Promise<void> {
@@ -415,13 +491,21 @@ function persistCryptoSeries(raw: unknown, ctx: PersistContext): Promise<void> {
 
   if (!symbol || candles.length === 0) return Promise.resolve();
 
-  return ctx.setDoc(`market_series/${symbol}`, {
-    symbol,
-    assetClass: 'crypto',
-    asOf: candles[candles.length - 1].date,
-    candles,
-    updatedAt: ctx.now().toISOString(),
-  });
+  const meta = SYMBOL_META[symbol] ?? { name: symbol, assetClass: 'crypto' as const };
+  const writes: Promise<void>[] = [
+    ctx.setDoc(`market_series/${symbol}`, {
+      symbol,
+      assetClass: meta.assetClass,
+      asOf: candles[candles.length - 1].date,
+      candles,
+      updatedAt: ctx.now().toISOString(),
+    }),
+  ];
+
+  const quote = buildQuoteSnapshot(symbol, meta.name, meta.assetClass, candles, meta.proxyFor);
+  if (quote) writes.push(updateDashboard(ctx, quote));
+
+  return Promise.all(writes).then(() => undefined);
 }
 
 function persistFxSeries(raw: unknown, ctx: PersistContext): Promise<void> {
@@ -446,13 +530,32 @@ function persistFxSeries(raw: unknown, ctx: PersistContext): Promise<void> {
 
   if (candles.length === 0) return Promise.resolve();
 
-  return ctx.setDoc(`market_series/${symbol}`, {
-    symbol,
-    assetClass: 'fx',
-    asOf: candles[candles.length - 1].date,
-    candles,
-    updatedAt: ctx.now().toISOString(),
-  });
+  const meta = SYMBOL_META[symbol] ?? { name: symbol, assetClass: 'fx' as const };
+  const writes: Promise<void>[] = [
+    ctx.setDoc(`market_series/${symbol}`, {
+      symbol,
+      assetClass: meta.assetClass,
+      asOf: candles[candles.length - 1].date,
+      candles,
+      updatedAt: ctx.now().toISOString(),
+    }),
+  ];
+
+  const quote = buildQuoteSnapshot(symbol, meta.name, meta.assetClass, candles, meta.proxyFor);
+  if (quote) writes.push(updateDashboard(ctx, quote));
+
+  return Promise.all(writes).then(() => undefined);
+}
+
+/**
+ * Read the current dashboard snapshot and merge a fresh quote into it.
+ * A stale tile from a partial rotation update must not wipe out tiles
+ * that haven't refreshed yet.
+ */
+async function updateDashboard(ctx: PersistContext, quote: QuoteSnapshot): Promise<void> {
+  const existing = (await ctx.getDoc(DASHBOARD_DOC_PATH)) as DashboardSnapshot | null;
+  const merged = mergeDashboardSnapshot(existing, quote, ctx.now());
+  await ctx.setDoc(DASHBOARD_DOC_PATH, merged as unknown as Record<string, unknown>);
 }
 
 function persistMovers(raw: unknown, ctx: PersistContext): Promise<void> {
