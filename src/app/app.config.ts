@@ -10,6 +10,7 @@ import { provideEchartsCore } from 'ngx-echarts';
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
 import { IngestionSchedulerService } from './core/ingestion/ingestion-scheduler.service';
+import { providePreferencesInitializer } from './services/user-preferences.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -34,5 +35,8 @@ export const appConfig: ApplicationConfig = {
       const scheduler = inject(IngestionSchedulerService);
       scheduler.start();
     }),
+    // Phase 6: restore widget/topic preferences on app start (previously
+    // only loaded from the profile page).
+    providePreferencesInitializer(),
   ],
 };

@@ -1,8 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MarketDataService } from '../../services/market-data.service';
+import { UserPreferencesService } from '../../services/user-preferences.service';
 import { asOfLabel, daysStale } from '../../shared/dashboard.util';
 import { MarketStatusStripComponent } from './market-status-strip.component';
+import { WatchlistStripComponent } from './watchlist-strip.component';
 import { IndexRowWidgetComponent } from './index-row-widget.component';
 import { SectorHeatmapWidgetComponent } from './sector-heatmap-widget.component';
 import { MoversWidgetComponent } from './movers-widget.component';
@@ -13,15 +15,23 @@ import { SentimentWidgetComponent } from './sentiment-widget.component';
 import { NewsRailWidgetComponent } from './news-rail-widget.component';
 import { UpcomingWidgetComponent } from './upcoming-widget.component';
 
+/** Widget registry: id → template key. Order/visibility come from prefs. */
+const WIDGET_IDS = [
+  'index', 'sectors', 'movers', 'cross-asset',
+  'rates', 'macro', 'sentiment', 'news', 'upcoming',
+] as const;
+
 /**
  * Market dashboard at `/` (Phase 4). Composes standalone widgets, most-scanned
- * information first. A full render is ~4 Firestore reads via MarketDataService.
+ * information first. Widget visibility and order follow user preferences
+ * (Phase 6) — the main lever for the "clutter free" requirement.
  */
 @Component({
   selector: 'pp-dashboard',
   standalone: true,
   imports: [
     MarketStatusStripComponent,
+    WatchlistStripComponent,
     IndexRowWidgetComponent,
     SectorHeatmapWidgetComponent,
     MoversWidgetComponent,
@@ -36,43 +46,61 @@ import { UpcomingWidgetComponent } from './upcoming-widget.component';
     <div class="mx-auto max-w-7xl space-y-4 p-4">
       <pp-market-status-strip [dataAsOf]="snapshotAsOfLabel()" />
 
-      <pp-index-row-widget [quotes]="quotes()" [loading]="loading()" />
+      <pp-watchlist-strip [quotes]="quotes()" />
 
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <pp-sector-heatmap-widget [quotes]="quotes()" [loading]="loading()" />
-        <pp-movers-widget
-          [gainers]="movers()?.gainers ?? []"
-          [losers]="movers()?.losers ?? []"
-          [mostActive]="movers()?.mostActive ?? []"
-          [updatedAt]="movers()?.updatedAt ?? ''"
-          [loading]="loadingMovers()" />
-      </div>
-
-      <pp-cross-asset-widget [quotes]="quotes()" [loading]="loading()" />
-
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <pp-rates-widget [tenYear]="treasury10y()" [twoYear]="treasury2y()" />
-        <pp-macro-pulse-widget
-          [cpi]="cpi()"
-          [unemployment]="unemployment()"
-          [fedFunds]="fedFunds()"
-          [gdp]="gdp()"
-          [retailSales]="retailSales()" />
-      </div>
-
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <pp-sentiment-widget [articles]="news()" />
-        <pp-news-rail-widget [articles]="news()" />
-      </div>
-
-      <pp-upcoming-widget
-        [earnings]="earnings()?.events ?? []"
-        [ipos]="ipos()?.events ?? []" />
+      @for (id of visibleWidgets(); track id) {
+        @switch (id) {
+          @case ('index') {
+            <pp-index-row-widget [quotes]="quotes()" [loading]="loading()" />
+          }
+          @case ('sectors') {
+            <pp-sector-heatmap-widget [quotes]="quotes()" [loading]="loading()" />
+          }
+          @case ('movers') {
+            <pp-movers-widget
+              [gainers]="movers()?.gainers ?? []"
+              [losers]="movers()?.losers ?? []"
+              [mostActive]="movers()?.mostActive ?? []"
+              [updatedAt]="movers()?.updatedAt ?? ''"
+              [loading]="loadingMovers()" />
+          }
+          @case ('cross-asset') {
+            <pp-cross-asset-widget [quotes]="quotes()" [loading]="loading()" />
+          }
+          @case ('rates') {
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <pp-rates-widget [tenYear]="treasury10y()" [twoYear]="treasury2y()" />
+              @if (showWidget('macro')) {
+                <pp-macro-pulse-widget
+                  [cpi]="cpi()"
+                  [unemployment]="unemployment()"
+                  [fedFunds]="fedFunds()"
+                  [gdp]="gdp()"
+                  [retailSales]="retailSales()" />
+              }
+            </div>
+          }
+          @case ('sentiment') {
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <pp-sentiment-widget [articles]="news()" />
+              @if (showWidget('news')) {
+                <pp-news-rail-widget [articles]="news()" />
+              }
+            </div>
+          }
+          @case ('upcoming') {
+            <pp-upcoming-widget
+              [earnings]="earnings()?.events ?? []"
+              [ipos]="ipos()?.events ?? []" />
+          }
+        }
+      }
     </div>
   `,
 })
 export class DashboardComponent {
   private readonly marketData = inject(MarketDataService);
+  private readonly prefs = inject(UserPreferencesService);
 
   private readonly snapshot = toSignal(this.marketData.getDashboardSnapshot(), { initialValue: null });
   private readonly moversDoc = toSignal(this.marketData.getMovers(), { initialValue: null });
@@ -94,6 +122,22 @@ export class DashboardComponent {
   readonly fedFunds = toSignal(this.marketData.getMacro('fed-funds-rate'), { initialValue: null });
   readonly gdp = toSignal(this.marketData.getMacro('real-gdp'), { initialValue: null });
   readonly retailSales = toSignal(this.marketData.getMacro('retail-sales'), { initialValue: null });
+
+  private readonly preferences = toSignal(this.prefs.preferences$, { initialValue: this.prefs.getPreferencesValue() });
+
+  showWidget(id: string): boolean {
+    return !this.preferences().hiddenWidgets.includes(id);
+  }
+
+  /** Default order with user ordering applied; paired widgets collapse together. */
+  readonly visibleWidgets = computed<string[]>(() => {
+    const p = this.preferences();
+    const order = [...p.widgetOrder.filter((id) => (WIDGET_IDS as readonly string[]).includes(id))];
+    for (const id of WIDGET_IDS) {
+      if (!order.includes(id)) order.push(id);
+    }
+    return order.filter((id) => this.showWidget(id));
+  });
 
   readonly snapshotAsOfLabel = (): string => {
     const updated = this.snapshot()?.updatedAt;

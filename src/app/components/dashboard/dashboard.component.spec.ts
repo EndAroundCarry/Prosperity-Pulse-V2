@@ -3,6 +3,8 @@ import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { DashboardComponent } from './dashboard.component';
 import { MarketDataService } from '../../services/market-data.service';
+import { WatchlistService } from '../../services/watchlist.service';
+import { UserPreferencesService } from '../../services/user-preferences.service';
 import { QuoteSnapshot } from '../../models/instrument.model';
 
 const quote = (symbol: string): QuoteSnapshot => ({
@@ -27,6 +29,8 @@ describe('DashboardComponent', () => {
       imports: [DashboardComponent],
       providers: [
         provideRouter([]),
+        { provide: WatchlistService, useValue: { symbols: () => [], isFull: () => false, toggle: () => undefined, reorder: () => Promise.resolve() } },
+        { provide: UserPreferencesService, useValue: { preferences$: of({ selectedTopics: [], hiddenWidgets: [], widgetOrder: [] }), getPreferencesValue: () => ({ selectedTopics: [], hiddenWidgets: [], widgetOrder: [] }) } },
         {
           provide: MarketDataService,
           useValue: {

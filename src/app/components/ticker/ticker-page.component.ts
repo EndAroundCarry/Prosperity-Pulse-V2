@@ -5,6 +5,7 @@ import { map, switchMap } from 'rxjs';
 import { Candle } from '../../models/instrument.model';
 import { MarketDataService } from '../../services/market-data.service';
 import { FetchQueueService } from '../../services/fetch-queue.service';
+import { WatchlistService } from '../../services/watchlist.service';
 import { TickerHeaderComponent } from './ticker-header.component';
 import { TickerStatsComponent } from './ticker-stats.component';
 import { PriceChartComponent } from '../../shared/charts/price-chart.component';
@@ -30,7 +31,7 @@ import { WidgetCardComponent } from '../../shared/components/widget-card.compone
           [candles]="candles()"
           [fundamentals]="fundamentals()"
           [inWatchlist]="inWatchlist()"
-          (toggle)="onToggleWatchlist()" />
+          (toggle)="watchlist.toggle(symbol())" />
 
         <pp-widget-card
           title="Price Chart"
@@ -54,6 +55,7 @@ export class TickerPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly marketData = inject(MarketDataService);
   private readonly fetchQueue = inject(FetchQueueService);
+  readonly watchlist = inject(WatchlistService);
 
   /** Route param as a signal so in-place navigation re-reads everything. */
   readonly symbol = toSignal(
@@ -87,7 +89,7 @@ export class TickerPageComponent {
     { initialValue: [] }
   );
 
-  readonly inWatchlist = signal(false);
+  readonly inWatchlist = computed(() => this.watchlist.symbols().includes(this.symbol()));
 
   readonly chartState = computed(() => {
     const cs = this.candles();
@@ -107,20 +109,6 @@ export class TickerPageComponent {
   }
 
   onToggleWatchlist(): void {
-    const sym = this.symbol();
-    if (!sym) return;
-    this.inWatchlist.update((v) => !v);
-    // Guest flow per plan: localStorage until Phase 6 adds Firestore sync.
-    try {
-      const key = 'pp.watchlist';
-      const raw = localStorage.getItem(key);
-      const list: string[] = raw ? JSON.parse(raw) : [];
-      const next = this.inWatchlist()
-        ? [...new Set([...list, sym])]
-        : list.filter((s) => s !== sym);
-      localStorage.setItem(key, JSON.stringify(next));
-    } catch {
-      /* storage unavailable */
-    }
+    this.watchlist.toggle(this.symbol());
   }
 }
