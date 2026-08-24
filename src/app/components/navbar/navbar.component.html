@@ -36,6 +36,14 @@
           <span>News Feed</span>
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
         </a>
+        <a routerLink="/calendar" routerLinkActive="active-nav-link"
+          class="nav-link px-3.5 py-1.5 rounded-full text-sm font-medium text-slate-900 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all">
+          Calendar
+        </a>
+        <a routerLink="/macro" routerLinkActive="active-nav-link"
+          class="nav-link px-3.5 py-1.5 rounded-full text-sm font-medium text-slate-900 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all">
+          Macro
+        </a>
         @if (user$ | async) {
         <a routerLink="/profile" routerLinkActive="active-nav-link"
           class="nav-link px-3.5 py-1.5 rounded-full text-sm font-medium text-slate-900 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-all">
