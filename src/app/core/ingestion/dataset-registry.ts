@@ -175,7 +175,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.A,
       params: { function: 'TREASURY_YIELD', maturity: '10year', interval: 'daily' },
       format: 'json',
-      persist: persistMacro,
+      persist: (raw, ctx) => persistMacro(raw, ctx, 'treasury-10y'),
     },
     {
       id: 'crypto.BTC',
@@ -244,7 +244,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.C,
       params: { function: 'CPI' },
       format: 'json',
-      persist: persistMacro,
+      persist: (raw, ctx) => persistMacro(raw, ctx, 'cpi'),
     },
     {
       id: 'macro.UNEMPLOYMENT',
@@ -252,7 +252,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.C,
       params: { function: 'UNEMPLOYMENT' },
       format: 'json',
-      persist: persistMacro,
+      persist: (raw, ctx) => persistMacro(raw, ctx, 'unemployment'),
     },
     {
       id: 'macro.FEDERAL_FUNDS_RATE',
@@ -260,7 +260,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.C,
       params: { function: 'FEDERAL_FUNDS_RATE' },
       format: 'json',
-      persist: persistMacro,
+      persist: (raw, ctx) => persistMacro(raw, ctx, 'fed-funds-rate'),
     },
     {
       id: 'macro.REAL_GDP',
@@ -268,7 +268,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.C,
       params: { function: 'REAL_GDP' },
       format: 'json',
-      persist: persistMacro,
+      persist: (raw, ctx) => persistMacro(raw, ctx, 'real-gdp'),
     },
     {
       id: 'macro.RETAIL_SALES',
@@ -276,7 +276,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.C,
       params: { function: 'RETAIL_SALES' },
       format: 'json',
-      persist: persistMacro,
+      persist: (raw, ctx) => persistMacro(raw, ctx, 'retail-sales'),
     },
     {
       id: 'rates.2y',
@@ -284,7 +284,7 @@ export function buildDatasetRegistry(): DatasetDefinition[] {
       ttlMs: TTL.C,
       params: { function: 'TREASURY_YIELD', maturity: '2year', interval: 'daily' },
       format: 'json',
-      persist: persistMacro,
+      persist: (raw, ctx) => persistMacro(raw, ctx, 'treasury-2y'),
     },
     // ---- Tier C calendars ----
     {
@@ -582,7 +582,7 @@ function moverFromRow(row: Record<string, unknown>) {
   };
 }
 
-function persistMacro(raw: unknown, ctx: PersistContext): Promise<void> {
+function persistMacro(raw: unknown, ctx: PersistContext, stableId: string): Promise<void> {
   const r = (raw ?? {}) as Record<string, unknown>;
   const data = Array.isArray(r['data']) ? (r['data'] as Array<Record<string, unknown>>) : [];
   if (data.length === 0) return Promise.resolve();
@@ -595,20 +595,14 @@ function persistMacro(raw: unknown, ctx: PersistContext): Promise<void> {
     value: Number(d['value'] ?? 0),
   }));
 
-  const id = deriveMacroId(name);
-  return ctx.setDoc(`macro/${id}`, {
-    id,
+  return ctx.setDoc(`macro/${stableId}`, {
+    id: stableId,
     name,
     unit,
     interval,
     points,
     updatedAt: ctx.now().toISOString(),
   });
-}
-
-function deriveMacroId(name: string): string {
-  if (!name) return 'macro';
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'macro';
 }
 
 function persistEarningsCalendar(raw: unknown, ctx: PersistContext): Promise<void> {

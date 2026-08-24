@@ -146,7 +146,7 @@ describe('dataset registry', () => {
       ctx
     );
 
-    const doc = writes.get('macro/consumer-price-index-for-all-urban-consumers')!;
+    const doc = writes.get('macro/cpi')!;
     expect(doc['unit']).toBe('index 1982-1984=100');
     expect((doc['points'] as Array<{ value: number }>)[0].value).toBe(320.5);
   });
