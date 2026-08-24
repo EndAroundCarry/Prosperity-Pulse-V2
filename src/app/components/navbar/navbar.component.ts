@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { AsyncPipe, CommonModule } from '@angular/common';
 import { ThemeService } from '../../core/theme.service';
+import { CommandPaletteComponent } from '../../shared/components/command-palette.component';
 
 @Component({
   selector: 'app-navbar',
@@ -27,6 +28,7 @@ import { ThemeService } from '../../core/theme.service';
     CommonModule,
     RouterLink,
     RouterLinkActive,
+    CommandPaletteComponent,
   ],
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.css'],

@@ -19,7 +19,7 @@ function sentimentBadge(score: number | undefined): { label: string; cls: string
   imports: [WidgetCardComponent, RouterLink],
   template: `
     <pp-widget-card
-      title="Latest News"
+      [title]="title()"
       [state]="state()"
       emptyMessage="News arrives after the first ingest.">
       <ul class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -50,6 +50,7 @@ function sentimentBadge(score: number | undefined): { label: string; cls: string
 export class NewsRailWidgetComponent {
   readonly articles = input<NewsArticle[]>([]);
   readonly loading = input(false);
+  readonly title = input('Latest News');
 
   readonly state = computed(() => {
     if (this.loading()) return 'loading' as const;

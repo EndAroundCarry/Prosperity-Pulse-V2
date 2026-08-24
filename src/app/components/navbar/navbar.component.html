@@ -47,6 +47,17 @@
 
     <!-- Right Controls -->
     <div class="flex items-center gap-2.5 sm:gap-3">
+      <!-- Symbol search (Ctrl/Cmd+K) -->
+      <button type="button" (click)="palette.openPalette()"
+        class="flex items-center gap-2 px-3 h-9 rounded-full border border-slate-200 dark:border-slate-700
+               bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-500 dark:text-slate-400
+               hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+        aria-label="Search symbols">
+        <mat-icon class="!w-4 !h-4 !text-base">search</mat-icon>
+        <span class="hidden sm:inline">Search</span>
+        <kbd class="hidden md:inline text-[10px] px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-600">Ctrl K</kbd>
+      </button>
+
       <!-- Dark Mode Toggle Button -->
       <button type="button" (click)="toggleDarkMode()"
         matTooltip="{{ darkMode ? 'Switch to Light mode' : 'Switch to Dark mode' }}"
@@ -140,3 +151,5 @@
     </div>
   </div>
 </header>
+
+<pp-command-palette #palette />

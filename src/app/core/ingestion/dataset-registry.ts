@@ -341,11 +341,27 @@ function sectorEtfs(): DatasetDefinition[] {
   }));
 }
 
+/**
+ * Build a one-off on-demand dataset for a user-requested ticker.
+ * One call refreshes the price series; the quote merge reuses persistSeries.
+ */
+export function buildOnDemandSeriesDataset(symbol: string): DatasetDefinition {
+  const sym = symbol.trim().toUpperCase();
+  return {
+    id: `series.${sym}`,
+    tier: 'ondemand',
+    ttlMs: TTL.ondemand,
+    params: { function: 'TIME_SERIES_DAILY', symbol: sym, outputsize: 'compact' },
+    format: 'json',
+    meta: SYMBOL_META[sym] ?? { name: sym, assetClass: 'equity' },
+    persist: persistSeries,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Pure persist handlers. Each takes (raw payload, PersistContext) and writes
 // the Firestore layout described in Phase 2.
 // ---------------------------------------------------------------------------
-
 function persistNews(raw: unknown, ctx: PersistContext): Promise<void> {
   const feed = (raw as { feed?: unknown[] })?.feed ?? [];
   const nowIso = ctx.now().toISOString();

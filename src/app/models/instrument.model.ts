@@ -85,3 +85,30 @@ export interface DashboardSnapshot {
 }
 
 export const SPARKLINE_POINTS = 30;
+
+/** Company overview + earnings history for one symbol (on-demand). */
+export interface FundamentalsDoc {
+  symbol: string;
+  overview: {
+    name: string;
+    exchange: string;
+    sector: string;
+    industry: string;
+    description: string;
+    marketCap: number | null;
+    peRatio: number | null;
+    eps: number | null;
+    dividendYield: number | null;
+    beta: number | null;
+    week52High: number | null;
+    week52Low: number | null;
+  } | null;
+  /** Actual vs estimate per quarter — beat/miss is high-signal. */
+  earnings: Array<{
+    fiscalDateEnding: string;
+    estimate: number | null;
+    reported: number | null;
+    surprisePercent: number | null;
+  }>;
+  updatedAt?: string;
+}

@@ -7,6 +7,8 @@ import {
   MacroSeries,
   EarningsEvent,
   IpoEvent,
+  Candle,
+  FundamentalsDoc,
 } from '../models/instrument.model';
 import { NewsArticle } from '../models/news-article.model';
 
@@ -75,6 +77,42 @@ export class MarketDataService {
   getTopNews(count = 6): Observable<NewsArticle[]> {
     const q = query(collection(this.firestore, 'news'), orderBy('publishedAt', 'desc'), limit(count));
     return collectionData(q).pipe(map((docs) => (docs ?? []).map(toArticle)));
+  }
+
+  /** Cached candles for one symbol, or null when not yet ingested. */
+  getSeries(symbol: string): Observable<Candle[] | null> {
+    return docData(doc(this.firestore, 'market_series', symbol.trim().toUpperCase())).pipe(
+      map((d) => {
+        if (!d) return null;
+        const candles = d['candles'];
+        return Array.isArray(candles) ? (candles as Candle[]) : null;
+      })
+    );
+  }
+
+  /** OVERVIEW + EARNINGS payload for one symbol (on-demand), or null. */
+  getFundamentals(symbol: string): Observable<FundamentalsDoc | null> {
+    return docData(doc(this.firestore, 'fundamentals', symbol.trim().toUpperCase())).pipe(
+      map((d) => (d && Object.keys(d).length > 0 ? (d as unknown as FundamentalsDoc) : null))
+    );
+  }
+
+  /**
+   * Related news: recent articles mentioning the ticker. Filtering by
+   * `tickerSentiment.ticker` client-side over a bounded window — the
+   * composite-index route is Phase 8's pagination fix.
+   */
+  getRelatedNews(symbol: string, scan = 100): Observable<NewsArticle[]> {
+    const sym = symbol.trim().toUpperCase();
+    const q = query(collection(this.firestore, 'news'), orderBy('publishedAt', 'desc'), limit(scan));
+    return collectionData(q).pipe(
+      map((docs) =>
+        (docs ?? [])
+          .map(toArticle)
+          .filter((a) => (a.tickerSentiment ?? []).some((t) => t.ticker.toUpperCase() === sym))
+          .slice(0, 10)
+      )
+    );
   }
 }
 

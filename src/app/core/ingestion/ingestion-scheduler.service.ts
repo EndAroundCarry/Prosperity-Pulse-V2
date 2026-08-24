@@ -8,7 +8,9 @@ import {
   DatasetDefinition,
   DatasetState,
   buildDatasetRegistry,
+  buildOnDemandSeriesDataset,
 } from './dataset-registry';
+import { FetchQueueService } from '../../services/fetch-queue.service';
 
 export const TICK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -79,6 +81,7 @@ export class IngestionSchedulerService {
   private readonly lockService = inject(IngestLockService);
   private readonly quotaService = inject(QuotaLedgerService);
   private readonly persistAdapter = inject(FirestorePersistAdapter);
+  private readonly fetchQueue = inject(FetchQueueService);
 
   private readonly definitions = buildDatasetRegistry();
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -114,6 +117,23 @@ export class IngestionSchedulerService {
       if (!holder) return;
 
       try {
+        // On-demand requests outrank every background dataset.
+        const queued = await this.fetchQueue.dequeueOldest().catch(() => null);
+        if (queued) {
+          const onDemandDef = buildOnDemandSeriesDataset(queued.symbol);
+          try {
+            await this.quotaService.reserve(true);
+            const raw = await this.alphaVantage.fetchDataset(onDemandDef);
+            await onDemandDef.persist(raw, this.persistAdapter);
+            await this.stampDatasetState(onDemandDef.id, 'ok');
+          } catch (err) {
+            await this.handleFetchError(onDemandDef, err);
+          } finally {
+            await this.fetchQueue.remove(queued.symbol);
+          }
+          return;
+        }
+
         const stateById = await this.readDatasetStates();
         const dataset = selectDatasetToFetch(this.definitions, stateById, Date.now());
         if (!dataset) return;
