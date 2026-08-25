@@ -20,8 +20,18 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { NewsArticle } from '../../models/news-article.model';
-import { NewsFilter, NewsService } from '../../services/news.service';
+import {
+  NewsArticle,
+  TickerSentiment,
+} from '../../models/news-article.model';
+import {
+  BULLISH_THRESHOLD,
+  NewsFilter,
+  NewsService,
+  NewsSortMode,
+  SentimentBucket,
+  sentimentBucket,
+} from '../../services/news.service';
 import { NewsDetailDialogComponent } from '../news-detail-dialog/news-detail-dialog.component';
 import { UserPreferencesService } from '../../services/user-preferences.service';
 import { CommentService } from '../../services/comment.service';
@@ -75,7 +85,32 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
 
   searchQuery = '';
   selectedTopics: string[] = []; // Topics selected via UI filter
-  private activeFilter: NewsFilter = { searchQuery: '', topics: [] };
+  selectedTicker = '';
+  selectedSentiment: SentimentBucket | '' = '';
+  sortMode: NewsSortMode = 'newest';
+
+  readonly sentimentOptions: { value: SentimentBucket | ''; label: string }[] = [
+    { value: '', label: 'All sentiments' },
+    { value: 'bullish', label: 'Bullish' },
+    { value: 'neutral', label: 'Neutral' },
+    { value: 'bearish', label: 'Bearish' },
+  ];
+
+  readonly sortOptions: { value: NewsSortMode; label: string }[] = [
+    { value: 'newest', label: 'Newest' },
+    { value: 'most-relevant', label: 'Most relevant' },
+    { value: 'most-bullish', label: 'Most bullish' },
+    { value: 'most-bearish', label: 'Most bearish' },
+    { value: 'most-discussed', label: 'Most discussed' },
+  ];
+
+  private activeFilter: NewsFilter = {
+    searchQuery: '',
+    topics: [],
+    ticker: '',
+    sentiment: undefined,
+    sort: 'newest',
+  };
 
   // Topics selected in user profile preferences
   private userPreferredTopics: string[] = [];
@@ -159,25 +194,103 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
     );
   }
 
-  private sortArticles(articlesList: NewsArticle[]): NewsArticle[] {
-    if (this.hasActiveFilters) {
-      return articlesList;
+  getSentimentBadge(article: NewsArticle): {
+    label: string;
+    score: number | null;
+    cls: string;
+  } | null {
+    const bucket = sentimentBucket(article.overallSentimentScore);
+    if (!bucket) return null;
+    const base =
+      'absolute bottom-2.5 left-3 px-2 py-0.5 text-[10px] font-bold rounded-full backdrop-blur-md shadow-sm flex items-center gap-1 border';
+    if (bucket === 'bullish') {
+      return {
+        label: 'Bullish',
+        score: article.overallSentimentScore ?? null,
+        cls: `${base} bg-cyan-500/90 text-white border-cyan-300/50`,
+      };
     }
+    if (bucket === 'bearish') {
+      return {
+        label: 'Bearish',
+        score: article.overallSentimentScore ?? null,
+        cls: `${base} bg-orange-500/90 text-white border-orange-300/50`,
+      };
+    }
+    return {
+      label: 'Neutral',
+      score: article.overallSentimentScore ?? null,
+      cls: `${base} bg-slate-600/90 text-white border-slate-400/50`,
+    };
+  }
 
-    // When NO filter is active, rank the most interacted with news first (score descending)
-    return [...articlesList].sort((a, b) => {
-      const statsA = this.getArticleStats(a);
-      const statsB = this.getArticleStats(b);
+  getTopTickers(article: NewsArticle): TickerSentiment[] {
+    if (!article.tickerSentiment?.length) return [];
+    return [...article.tickerSentiment]
+      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .slice(0, 3);
+  }
 
-      if (statsB.score !== statsA.score) {
-        return statsB.score - statsA.score;
-      }
+  tickerChipCls(sentimentLabel: string): string {
+    const normalized = sentimentLabel.toLowerCase();
+    if (normalized.includes('bullish')) return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300';
+    if (normalized.includes('bearish')) return 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300';
+    return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+  }
 
-      // Tie-break by publication date (newest first)
-      const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-      const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-      return dateB - dateA;
-    });
+  private sortArticles(articlesList: NewsArticle[]): NewsArticle[] {
+    const list = [...articlesList];
+    switch (this.activeFilter.sort) {
+      case 'most-bullish':
+        return list.sort(
+          (a, b) => (b.overallSentimentScore ?? -Infinity) - (a.overallSentimentScore ?? -Infinity)
+        );
+      case 'most-bearish':
+        return list.sort(
+          (a, b) => (a.overallSentimentScore ?? Infinity) - (b.overallSentimentScore ?? Infinity)
+        );
+      case 'most-discussed':
+        return list.sort((a, b) => {
+          const diff =
+            this.getArticleStats(b).commentCount - this.getArticleStats(a).commentCount;
+          if (diff !== 0) return diff;
+          return this.newestFirst(a, b);
+        });
+      default:
+        return list.sort((a, b) => this.newestFirst(a, b));
+    }
+  }
+
+  private newestFirst(a: NewsArticle, b: NewsArticle): number {
+    const dateA = a.publishedAtDate?.getTime() ?? new Date(a.publishedAt).getTime() ?? 0;
+    const dateB = b.publishedAtDate?.getTime() ?? new Date(b.publishedAt).getTime() ?? 0;
+    return dateB - dateA;
+  }
+
+  /** Client-side predicate applied per page while the fetch loop compensates. */
+  private matchesFilters(article: NewsArticle): boolean {
+    const queryLower = this.activeFilter.searchQuery.toLowerCase();
+    const matchesQuery =
+      !queryLower ||
+      article.title.toLowerCase().includes(queryLower) ||
+      article.summary.toLowerCase().includes(queryLower) ||
+      (article.tickerSentiment ?? []).some((t) => t.ticker.toLowerCase().includes(queryLower));
+
+    const matchesTopics =
+      this.activeFilter.topics.length === 0 ||
+      this.activeFilter.topics.every((topic) => article.topics.includes(topic));
+
+    const matchesTicker =
+      !this.activeFilter.ticker ||
+      (article.tickerSentiment ?? []).some(
+        (t) => t.ticker.toUpperCase() === this.activeFilter.ticker?.toUpperCase()
+      );
+
+    const matchesSentiment =
+      !this.activeFilter.sentiment ||
+      sentimentBucket(article.overallSentimentScore) === this.activeFilter.sentiment;
+
+    return matchesQuery && matchesTopics && matchesTicker && matchesSentiment;
   }
 
   onSearchInput(): void {
@@ -186,12 +299,49 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
     }
 
     this.searchDebounceTimer = setTimeout(() => {
-      this.applyFilter({ searchQuery: this.searchQuery, topics: this.activeFilter.topics });
+      this.applyFilter(this.buildFilter());
     }, 300);
   }
 
   onTopicFilterClosed(): void {
-    this.applyFilter({ searchQuery: this.activeFilter.searchQuery, topics: this.selectedTopics });
+    this.applyFilter(this.buildFilter());
+  }
+
+  onTickerFilterClosed(): void {
+    this.applyFilter(this.buildFilter());
+  }
+
+  onSentimentChanged(): void {
+    this.applyFilter(this.buildFilter());
+  }
+
+  onSortChanged(): void {
+    // Sorting only reorders what's already loaded — no refetch needed.
+    this.activeFilter = { ...this.activeFilter, sort: this.sortMode };
+    if (this.sortMode !== 'newest' || this.hasActiveFiltersExceptSort()) {
+      this.articles = this.sortArticles(this.articles);
+    } else {
+      this.articles = [...this.articles].sort((a, b) => this.newestFirst(a, b));
+    }
+  }
+
+  private hasActiveFiltersExceptSort(): boolean {
+    return (
+      this.activeFilter.searchQuery.trim().length > 0 ||
+      this.activeFilter.topics.length > 0 ||
+      !!this.activeFilter.ticker ||
+      !!this.activeFilter.sentiment
+    );
+  }
+
+  private buildFilter(): NewsFilter {
+    return {
+      searchQuery: this.searchQuery,
+      topics: this.selectedTopics,
+      ticker: this.selectedTicker.trim(),
+      sentiment: (this.selectedSentiment || undefined) as SentimentBucket | undefined,
+      sort: this.sortMode,
+    };
   }
 
   openArticle(article: NewsArticle): void {
@@ -213,19 +363,33 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   get hasActiveFilters(): boolean {
     return (
       this.activeFilter.searchQuery.trim().length > 0 ||
-      this.activeFilter.topics.length > 0
+      this.activeFilter.topics.length > 0 ||
+      !!this.activeFilter.ticker ||
+      !!this.activeFilter.sentiment
     );
   }
 
   clearFilters(): void {
     this.searchQuery = '';
     this.selectedTopics = [];
-    this.applyFilter({ searchQuery: '', topics: [] });
+    this.selectedTicker = '';
+    this.selectedSentiment = '';
+    this.applyFilter({ ...this.buildFilter(), sort: this.sortMode });
   }
 
   removeTopicFilter(topic: string): void {
     this.selectedTopics = this.selectedTopics.filter((t) => t !== topic);
-    this.applyFilter({ searchQuery: this.searchQuery, topics: this.selectedTopics });
+    this.applyFilter(this.buildFilter());
+  }
+
+  removeTickerFilter(): void {
+    this.selectedTicker = '';
+    this.applyFilter(this.buildFilter());
+  }
+
+  removeSentimentFilter(): void {
+    this.selectedSentiment = '';
+    this.applyFilter(this.buildFilter());
   }
 
   getTopicIcon(topic: string): string {
@@ -262,12 +426,18 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
     const normalizedFilter: NewsFilter = {
       searchQuery: filter.searchQuery.trim(),
       topics: [...filter.topics],
+      ticker: filter.ticker?.trim() ?? '',
+      sentiment: filter.sentiment,
+      sort: filter.sort ?? this.activeFilter.sort,
     };
 
     const unchanged =
       normalizedFilter.searchQuery === this.activeFilter.searchQuery &&
       normalizedFilter.topics.length === this.activeFilter.topics.length &&
-      normalizedFilter.topics.every((topic) => this.activeFilter.topics.includes(topic));
+      normalizedFilter.topics.every((topic) => this.activeFilter.topics.includes(topic)) &&
+      normalizedFilter.ticker === this.activeFilter.ticker &&
+      normalizedFilter.sentiment === this.activeFilter.sentiment &&
+      normalizedFilter.sort === this.activeFilter.sort;
 
     if (unchanged) {
       return;
@@ -286,12 +456,16 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
     this.lastPublishedAt = null;
   }
 
+  /**
+   * Over-fetches raw pages and filters client-side with a compensating
+   * loop until pageSize matching articles are gathered or the feed ends.
+   * This fixes filtering-after-pagination returning short pages / ending early.
+   */
   private loadMore(): void {
     if (this.loading || !this.hasMore) {
       return;
     }
 
-    // Prevent loading more if we've reached the max articles
     if (this.articles.length >= this.maxArticlesToShow) {
       this.hasMore = false;
       return;
@@ -299,72 +473,96 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
 
     this.loading = true;
 
-    this.newsService
-      .getArticlesRaw(this.activeFilter, this.currentPage, this.pageSize, this.lastPublishedAt)
-      .subscribe({
-        next: (rawArticles) => {
-          // Filter articles locally based on search query and topics
-          const filtered = rawArticles.filter((article) => {
-            const matchesQuery = article.title
-              .toLowerCase()
-              .includes(this.activeFilter.searchQuery.toLowerCase());
-            const matchesTopics =
-              this.activeFilter.topics.length === 0 ||
-              this.activeFilter.topics.every((topic) => article.topics.includes(topic));
-            return matchesQuery && matchesTopics;
-          });
+    const matched: NewsArticle[] = [];
+    const seenKeys = new Set(this.articles.map((a) => this.commentService.getArticleKey(a)));
+    const maxPagesToScan = 5;
+    let cursor = this.lastPublishedAt;
+    let pagesScanned = 0;
+    let exhaustedRaw = false;
 
-          // If active filters, prioritize user topics, otherwise sort by interaction score
-          let reordered: NewsArticle[];
-          if (this.hasActiveFilters) {
-            const matched = filtered.filter((article) =>
-              article.topics.some((t) => this.userPreferredTopics.includes(t))
-            );
-            const others = filtered.filter(
-              (article) => !article.topics.some((t) => this.userPreferredTopics.includes(t))
-            );
-            reordered = [...matched, ...others];
-          } else {
-            reordered = this.sortArticles(filtered);
+    const finish = (): void => {
+      const reordered =
+        this.hasActiveFilters && this.activeFilter.sort === 'newest'
+          ? this.preferUserTopics(matched)
+          : this.sortArticles(matched);
+
+      for (const article of reordered) {
+        const key = this.commentService.getArticleKey(article);
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          this.articles.push(article);
+        }
+      }
+
+      if (this.articles.length > this.maxArticlesToShow) {
+        this.articles = this.articles.slice(0, this.maxArticlesToShow);
+        this.hasMore = false;
+      }
+
+      // Feed is exhausted when Firestore ran out of docs, or a selective
+      // filter made us scan maxPagesToScan pages without filling pageSize.
+      this.hasMore =
+        !exhaustedRaw &&
+        pagesScanned < maxPagesToScan &&
+        matched.length >= this.pageSize &&
+        this.articles.length < this.maxArticlesToShow;
+
+      this.lastPublishedAt = cursor;
+      this.loading = false;
+    };
+
+    const fetchNextPage = (): void => {
+      if (
+        matched.length >= this.pageSize ||
+        exhaustedRaw ||
+        pagesScanned >= maxPagesToScan ||
+        this.articles.length >= this.maxArticlesToShow
+      ) {
+        finish();
+        return;
+      }
+
+      pagesScanned++;
+      this.newsService.getArticlesRaw(this.activeFilter, 0, this.pageSize, cursor).subscribe({
+        next: (rawArticles) => {
+          if (rawArticles.length === 0) {
+            exhaustedRaw = true;
+            fetchNextPage();
+            return;
           }
 
-          // Combine and strictly deduplicate all articles using unique article key
-          const uniqueMap = new Map<string, NewsArticle>();
-          for (const article of [...this.articles, ...reordered]) {
+          for (const article of rawArticles) {
+            if (!this.matchesFilters(article)) continue;
             const key = this.commentService.getArticleKey(article);
-            if (!uniqueMap.has(key)) {
-              uniqueMap.set(key, article);
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              matched.push(article);
             }
           }
 
-          const combinedArticles = Array.from(uniqueMap.values());
-          const finalArticles = this.hasActiveFilters
-            ? combinedArticles
-            : this.sortArticles(combinedArticles);
-
-          if (finalArticles.length > this.maxArticlesToShow) {
-            this.articles = finalArticles.slice(0, this.maxArticlesToShow);
-            this.hasMore = false;
-          } else {
-            this.articles = finalArticles;
+          cursor = rawArticles[rawArticles.length - 1].publishedAt ?? null;
+          if (rawArticles.length <= this.pageSize) {
+            exhaustedRaw = true;
           }
-
-          this.currentPage++;
-
-          // Determine if more data is available based on the number of raw articles fetched
-          this.hasMore = rawArticles.length > this.pageSize;
-
-          // Update pagination cursors for the next page
-          if (rawArticles.length > 0) {
-            const lastRaw = rawArticles[rawArticles.length - 1];
-            this.lastPublishedAt = lastRaw.publishedAt ?? null;
-          }
-
-          this.loading = false;
+          fetchNextPage();
         },
         error: () => {
-          this.loading = false;
+          exhaustedRaw = true;
+          finish();
         },
       });
+    };
+
+    fetchNextPage();
+  }
+
+  private preferUserTopics(articlesList: NewsArticle[]): NewsArticle[] {
+    const preferred = articlesList.filter((article) =>
+      article.topics.some((t) => this.userPreferredTopics.includes(t))
+    );
+    const others = articlesList.filter(
+      (article) => !article.topics.some((t) => this.userPreferredTopics.includes(t))
+    );
+    return [...preferred, ...others];
   }
 }

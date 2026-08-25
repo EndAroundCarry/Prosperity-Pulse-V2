@@ -75,6 +75,42 @@
       </mat-form-field>
     </div>
 
+    <!-- Ticker / Sentiment / Sort Row -->
+    <div class="flex flex-col sm:flex-row gap-3">
+      <mat-form-field appearance="outline" class="news-filter-field flex-1 w-full !mb-0">
+        <mat-label>Filter by ticker</mat-label>
+        <mat-icon matPrefix class="!mr-2 text-slate-400">tag</mat-icon>
+        <input matInput type="text" [(ngModel)]="selectedTicker" (ngModelChange)="onTickerFilterClosed()"
+          placeholder="e.g. AAPL" aria-label="Filter articles by ticker symbol" />
+        @if (selectedTicker) {
+        <button matSuffix mat-icon-button aria-label="Clear ticker filter"
+          (click)="removeTickerFilter()" class="!w-7 !h-7 mr-1">
+          <mat-icon class="!text-base">close</mat-icon>
+        </button>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="news-filter-field w-full sm:w-56 shrink-0 !mb-0">
+        <mat-label>Sentiment</mat-label>
+        <mat-select [(ngModel)]="selectedSentiment" (selectionChange)="onSentimentChanged()"
+          aria-label="Filter articles by sentiment">
+          @for (option of sentimentOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="news-filter-field w-full sm:w-56 shrink-0 !mb-0">
+        <mat-label>Sort by</mat-label>
+        <mat-select [(ngModel)]="sortMode" (selectionChange)="onSortChanged()"
+          aria-label="Sort articles">
+          @for (option of sortOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
     <!-- Active Filter Tags Row -->
     @if (hasActiveFilters) {
     <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
@@ -96,6 +132,27 @@
         <span>{{ topic }}</span>
         <button type="button" (click)="removeTopicFilter(topic)" class="hover:text-indigo-900"
           [attr.aria-label]="'Remove ' + topic">
+          <mat-icon class="!w-3.5 !h-3.5 !text-xs leading-none">close</mat-icon>
+        </button>
+      </span>
+      }
+      @if (selectedTicker) {
+      <span
+        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 font-medium border border-teal-200/60 dark:border-teal-800">
+        <mat-icon class="!w-3 !h-3 !text-xs">tag</mat-icon>
+        <span>{{ selectedTicker.toUpperCase() }}</span>
+        <button type="button" (click)="removeTickerFilter()" class="hover:text-teal-900"
+          aria-label="Remove ticker filter">
+          <mat-icon class="!w-3.5 !h-3.5 !text-xs leading-none">close</mat-icon>
+        </button>
+      </span>
+      }
+      @if (selectedSentiment) {
+      <span
+        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 font-medium border border-violet-200/60 dark:border-violet-800">
+        <span>{{ selectedSentiment }}</span>
+        <button type="button" (click)="removeSentimentFilter()" class="hover:text-violet-900"
+          [attr.aria-label]="'Remove ' + selectedSentiment + ' filter'">
           <mat-icon class="!w-3.5 !h-3.5 !text-xs leading-none">close</mat-icon>
         </button>
       </span>
@@ -157,6 +214,12 @@
           class="absolute bottom-2.5 right-3 text-[10px] text-white/90 font-medium px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-sm">
           {{ article.publishedAt | date: 'mediumDate' }}
         </span>
+
+        @if (getSentimentBadge(article); as badge) {
+          <span [class]="badge.cls" [matTooltip]="'Sentiment score: ' + (badge.score !== null ? badge.score.toFixed(2) : 'n/a')">
+            {{ badge.label }}
+          </span>
+        }
       </div>
 
       <mat-card-header class="!px-5 !pt-4 !pb-1">
@@ -176,6 +239,19 @@
         </span>
         }
       </div>
+
+      <!-- Ticker Chips -->
+      @if (getTopTickers(article).length > 0) {
+        <div class="px-5 pt-1.5 flex flex-wrap gap-1.5" aria-label="Mentioned tickers">
+          @for (ts of getTopTickers(article); track ts.ticker) {
+            <a routerLink="/ticker/{{ ts.ticker }}" (click)="$event.stopPropagation()"
+              [class]="'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ' + tickerChipCls(ts.sentimentLabel)"
+              [matTooltip]="ts.sentimentLabel + ' (' + ts.relevanceScore.toFixed(2) + ')'">
+              {{ ts.ticker }}
+            </a>
+          }
+        </div>
+      }
 
       <mat-card-content class="!px-5 !pt-2.5 !pb-5 flex-1 flex flex-col justify-between">
         <p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed">
