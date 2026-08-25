@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { NewsArticle } from '../../models/news-article.model';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
 import { SentimentGaugeComponent } from '../../shared/charts/sentiment-gauge.component';
@@ -12,6 +12,7 @@ import { SentimentSummary, summarizeSentiment } from '../../shared/dashboard.uti
 @Component({
   selector: 'pp-sentiment-widget',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [WidgetCardComponent, SentimentGaugeComponent],
   template: `
     <pp-widget-card

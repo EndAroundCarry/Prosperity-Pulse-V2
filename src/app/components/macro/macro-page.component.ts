@@ -1,10 +1,11 @@
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MacroSeries } from '../../models/instrument.model';
 import { MarketDataService } from '../../services/market-data.service';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
 import { MacroChartComponent } from '../../shared/charts/macro-chart.component';
 import { RatesWidgetComponent } from '../dashboard/rates-widget.component';
+import { SeoService } from '../../services/seo.service';
 
 interface MacroEntry {
   id: string;
@@ -34,6 +35,7 @@ function latest(series: MacroSeries | null): { value: number; date: string } | n
 @Component({
   selector: 'pp-macro-page',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [WidgetCardComponent, MacroChartComponent, RatesWidgetComponent],
   template: `
     <div class="mx-auto max-w-7xl space-y-4 p-4">
@@ -67,8 +69,19 @@ function latest(series: MacroSeries | null): { value: number; date: string } | n
     </div>
   `,
 })
-export class MacroPageComponent {
+export class MacroPageComponent implements OnInit {
   private readonly marketData = inject(MarketDataService);
+  private readonly seoService = inject(SeoService);
+
+  ngOnInit(): void {
+    this.seoService.updateSeo({
+      title: 'Macro Dashboard — CPI, Unemployment, Fed Funds Rate, GDP & Yields',
+      description:
+        'Track US macroeconomic indicators at a glance: CPI/inflation, unemployment, the Fed funds rate, GDP, retail sales, and the Treasury yield curve, each with a plain-English explainer.',
+      keywords: 'macro dashboard, CPI, inflation, unemployment rate, fed funds rate, GDP, treasury yields, yield curve',
+      url: '/macro',
+    });
+  }
 
   readonly byId: Record<string, ReturnType<typeof toSignal<MacroSeries | null>>> = {
     ...Object.fromEntries(INDICATORS.map(({ id }) => [id, toSignal(this.marketData.getMacro(id), { initialValue: null })])),

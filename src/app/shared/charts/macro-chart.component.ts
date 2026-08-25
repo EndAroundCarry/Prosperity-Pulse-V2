@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { provideEchartsCore, NgxEchartsDirective } from 'ngx-echarts';
 import { ThemeService } from '../../core/theme.service';
 
@@ -11,9 +11,10 @@ import { ThemeService } from '../../core/theme.service';
 @Component({
   selector: 'pp-macro-chart',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgxEchartsDirective],
   providers: [provideEchartsCore({ echarts: () => import('./echarts-core') })],
-  template: `<div echarts [options]="options()" [theme]="themeService.mode()" class="block w-full h-full"></div>`,
+  template: `<div echarts [options]="options()" [theme]="themeService.mode()" role="img" [attr.aria-label]="title() ? title() + ' line chart with ' + points().length + ' data points' : 'Macro indicator line chart'" class="block w-full h-full"></div>`,
 })
 export class MacroChartComponent {
   readonly title = input('');

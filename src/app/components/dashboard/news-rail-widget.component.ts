@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NewsArticle } from '../../models/news-article.model';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
@@ -16,6 +16,7 @@ function sentimentBadge(score: number | undefined): { label: string; cls: string
 @Component({
   selector: 'pp-news-rail-widget',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [WidgetCardComponent, RouterLink],
   template: `
     <pp-widget-card

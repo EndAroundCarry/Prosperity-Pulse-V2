@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
@@ -7,6 +7,7 @@ import { EarningsEvent, IpoEvent } from '../../models/instrument.model';
 import { MarketDataService } from '../../services/market-data.service';
 import { WatchlistService } from '../../services/watchlist.service';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
+import { SeoService } from '../../services/seo.service';
 
 interface EarningsDay {
   date: string;
@@ -40,6 +41,7 @@ export function groupEarningsByDay(
 @Component({
   selector: 'pp-calendar-page',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, DatePipe, FormsModule, WidgetCardComponent],
   template: `
     <div class="mx-auto max-w-7xl space-y-4 p-4">
@@ -99,9 +101,20 @@ export function groupEarningsByDay(
     </div>
   `,
 })
-export class CalendarPageComponent {
+export class CalendarPageComponent implements OnInit {
   private readonly marketData = inject(MarketDataService);
   private readonly watchlist = inject(WatchlistService);
+  private readonly seoService = inject(SeoService);
+
+  ngOnInit(): void {
+    this.seoService.updateSeo({
+      title: 'Earnings & IPO Calendar — 3-Month Forward Outlook',
+      description:
+        'Upcoming earnings reports and IPOs over a 3-month horizon, grouped by day and filterable to your watchlist.',
+      keywords: 'earnings calendar, IPO calendar, upcoming earnings, earnings estimates, IPO price range',
+      url: '/calendar',
+    });
+  }
 
   private readonly earningsDoc = toSignal(this.marketData.getEarningsCalendar(), { initialValue: null });
   private readonly ipoDoc = toSignal(this.marketData.getIpoCalendar(), { initialValue: null });

@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { MacroSeries } from '../../models/instrument.model';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
 import { MacroChartComponent } from '../../shared/charts/macro-chart.component';
@@ -24,6 +24,7 @@ const INDICATORS: Array<{ id: string; label: string }> = [
 @Component({
   selector: 'pp-macro-pulse-widget',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [WidgetCardComponent],
   template: `
     <pp-widget-card

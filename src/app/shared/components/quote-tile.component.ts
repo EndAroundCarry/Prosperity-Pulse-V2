@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { QuoteSnapshot } from '../../models/instrument.model';
 import { SparklineComponent } from '../charts/sparkline.component';
 import { asOfLabel, directionArrow, formatSigned } from '../dashboard.util';
@@ -10,9 +10,10 @@ import { asOfLabel, directionArrow, formatSigned } from '../dashboard.util';
 @Component({
   selector: 'pp-quote-tile',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [SparklineComponent],
   template: `
-    <div class="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+    <div role="img" class="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4" [attr.aria-label]="ariaLabel()">
       <div class="flex items-baseline justify-between">
         <div>
           <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">{{ quote().name }}</span>

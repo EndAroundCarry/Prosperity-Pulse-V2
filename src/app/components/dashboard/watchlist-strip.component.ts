@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { QuoteSnapshot } from '../../models/instrument.model';
@@ -12,6 +12,7 @@ import { directionArrow, formatSigned } from '../../shared/dashboard.util';
 @Component({
   selector: 'pp-watchlist-strip',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, DragDropModule],
   template: `
     @if (watchlist.symbols().length > 0) {

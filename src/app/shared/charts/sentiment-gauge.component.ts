@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { provideEchartsCore, NgxEchartsDirective } from 'ngx-echarts';
 import { ThemeService } from '../../core/theme.service';
 
@@ -8,9 +8,10 @@ import { ThemeService } from '../../core/theme.service';
 @Component({
   selector: 'pp-sentiment-gauge',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgxEchartsDirective],
   providers: [provideEchartsCore({ echarts: () => import('./echarts-core') })],
-  template: `<div echarts [options]="options()" [theme]="themeService.mode()" class="block w-full h-[220px]"></div>`,
+  template: `<div echarts [options]="options()" [theme]="themeService.mode()" role="img" [attr.aria-label]="'News sentiment gauge, score ' + score().toFixed(2) + ' out of 1'" class="block w-full h-[220px]"></div>`,
 })
 export class SentimentGaugeComponent {
   readonly score = input<number>(0); // -1..1

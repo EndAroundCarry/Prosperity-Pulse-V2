@@ -1,5 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -21,7 +22,7 @@ import { Firestore, doc, setDoc, getDoc, updateDoc, collection, collectionData, 
   selector: 'app-user-profile',
   standalone: true,
   imports: [
-    CommonModule,
+    AsyncPipe,
     RouterModule,
     MatCardModule,
     MatChipsModule,
@@ -42,6 +43,7 @@ export class UserProfileComponent implements OnInit {
   private readonly firestore = inject(Firestore);
   private readonly snackBar = inject(MatSnackBar);
   private readonly seoService = inject(SeoService);
+  private readonly destroyRef = inject(DestroyRef);
 
   user$: Observable<User | null> = this.authService.currentUser$;
   allTopics: string[] = [];
@@ -60,7 +62,9 @@ export class UserProfileComponent implements OnInit {
       keywords: 'profile settings, topic preferences, financial news personalization',
       url: '/profile',
     });
-    this.user$.subscribe(async (user) => {
+    this.user$
+      .pipe(takeUntilDestroyed())
+      .subscribe(async (user) => {
       if (!user) {
         this.isLoading = false;
         return;
@@ -123,7 +127,10 @@ export class UserProfileComponent implements OnInit {
           await persistTopics(this.selectedTopics);
 
           this.userPrefsService.loadPreferences();
-          this.userPrefsService.getPreferences().subscribe((prefs) => {
+          this.userPrefsService
+            .getPreferences()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((prefs) => {
             this.selectedTopics = [...prefs.selectedTopics];
             this.savedTopics = [...prefs.selectedTopics];
           });

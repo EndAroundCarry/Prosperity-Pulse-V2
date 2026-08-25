@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 /**
  * Inline-SVG sparkline — deliberately NOT ECharts. Dozens render per
@@ -8,6 +8,7 @@ import { Component, computed, input } from '@angular/core';
 @Component({
   selector: 'pp-sparkline',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (points().length > 1) {
     <svg [attr.viewBox]="viewBox()" [attr.aria-label]="ariaLabel()" role="img" class="block w-full h-full">

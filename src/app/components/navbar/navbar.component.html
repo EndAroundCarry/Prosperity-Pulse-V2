@@ -68,7 +68,7 @@
 
       <!-- Dark Mode Toggle Button -->
       <button type="button" (click)="toggleDarkMode()"
-        matTooltip="{{ darkMode ? 'Switch to Light mode' : 'Switch to Dark mode' }}"
+        matTooltip="{{ darkMode() ? 'Switch to Light mode' : 'Switch to Dark mode' }}"
         class="flex items-center justify-center w-9 h-9 rounded-full transition-all shadow-sm
                border
                border-amber-300 bg-amber-50 text-amber-600
@@ -77,7 +77,7 @@
                dark:hover:bg-slate-700 dark:hover:border-yellow-400"
         aria-label="Toggle dark mode">
         <mat-icon class="!w-5 !h-5 !text-xl leading-none">
-          {{ darkMode ? 'light_mode' : 'dark_mode' }}
+          {{ darkMode() ? 'light_mode' : 'dark_mode' }}
         </mat-icon>
       </button>
 

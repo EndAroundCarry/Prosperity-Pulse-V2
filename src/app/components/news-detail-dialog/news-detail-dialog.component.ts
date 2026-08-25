@@ -1,5 +1,6 @@
-import { CommonModule, DatePipe } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { AsyncPipe, DatePipe, NgOptimizedImage } from '@angular/common';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,8 +22,9 @@ import { SeoService } from '../../services/seo.service';
   selector: 'app-news-detail-dialog',
   standalone: true,
   imports: [
-    CommonModule,
+    AsyncPipe,
     DatePipe,
+    NgOptimizedImage,
     FormsModule,
     MatDialogModule,
     MatButtonModule,
@@ -41,6 +43,7 @@ export class NewsDetailDialogComponent implements OnInit {
   private readonly commentService = inject(CommentService);
   private readonly authService = inject(AuthService);
   private readonly seoService = inject(SeoService);
+  private readonly destroyRef = inject(DestroyRef);
 
   articleKey = '';
   user$: Observable<User | null> = this.authService.currentUser$;
@@ -62,7 +65,7 @@ export class NewsDetailDialogComponent implements OnInit {
     this.seoService.setArticleStructuredData(this.article);
     this.articleReaction$ = this.commentService.getArticleReactions(this.articleKey);
 
-    this.userSub = this.user$.subscribe((user) => {
+    this.userSub = this.user$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((user) => {
       this.currentUser = user;
       if (user) {
         this.currentUserId = user.email ?? user.uid;

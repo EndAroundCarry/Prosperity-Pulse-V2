@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { SkeletonComponent } from './skeleton.component';
 
 /**
@@ -9,12 +9,13 @@ import { SkeletonComponent } from './skeleton.component';
 @Component({
   selector: 'pp-widget-card',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [SkeletonComponent],
   template: `
-    <section class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+    <section class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm" [attr.aria-labelledby]="title() ? widgetTitleId : null">
       <header class="flex items-center justify-between gap-2 mb-3">
         <div class="flex items-center gap-1.5">
-          <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ title() }}</h2>
+          <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300" [id]="widgetTitleId">{{ title() }}</h2>
           @if (info()) {
             <span
               class="text-[10px] text-slate-400 cursor-help select-none"
@@ -50,6 +51,8 @@ import { SkeletonComponent } from './skeleton.component';
   `,
 })
 export class WidgetCardComponent {
+  private static nextId = 0;
+  readonly widgetTitleId = `pp-widget-title-${WidgetCardComponent.nextId++}`;
   readonly title = input.required<string>();
   readonly state = input<'loading' | 'loaded' | 'empty'>('loaded');
   readonly asOf = input<string>('');

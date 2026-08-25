@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { provideEchartsCore, NgxEchartsDirective } from 'ngx-echarts';
 import { ThemeService } from '../../core/theme.service';
 import { Candle } from '../../models/instrument.model';
@@ -12,6 +12,7 @@ export type PriceRange = '1M' | '3M' | '6M' | '1Y';
 @Component({
   selector: 'pp-price-chart',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgxEchartsDirective],
   providers: [provideEchartsCore({ echarts: () => import('./echarts-core') })],
   template: `
@@ -26,11 +27,12 @@ export type PriceRange = '1M' | '3M' | '6M' | '1Y';
       </button>
       }
     </div>
-    <div echarts [options]="options()" [theme]="themeService.mode()" class="block w-full h-[320px]"></div>
+    <div echarts [options]="options()" [theme]="themeService.mode()" role="img" [attr.aria-label]="ariaLabel() || ('Price chart, ' + range() + ' range')" class="block w-full h-[320px]"></div>
   `,
 })
 export class PriceChartComponent {
   readonly candles = input<Candle[]>([]);
+  readonly ariaLabel = input<string>('');
   readonly themeService = inject(ThemeService);
   readonly ranges: PriceRange[] = ['1M', '3M', '6M', '1Y'];
   readonly range = signal<PriceRange>('3M');

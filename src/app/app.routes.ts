@@ -31,5 +31,11 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./components/macro/macro-page.component').then((m) => m.MacroPageComponent),
   },
-  { path: '**', redirectTo: '' }, // 404 fallback (dedicated page is Phase 9 polish)
+  {
+    path: 'about-data',
+    loadComponent: () =>
+      import('./components/about-data/about-data.component').then((m) => m.AboutDataPageComponent),
+    title: 'About Our Data | Prosperity Pulse',
+  },
+  { path: '**', redirectTo: '' },
 ];

@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FundamentalsDoc } from '../../models/instrument.model';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
@@ -11,6 +11,7 @@ import { WidgetCardComponent } from '../../shared/components/widget-card.compone
 @Component({
   selector: 'pp-ticker-stats',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [WidgetCardComponent, DatePipe],
   template: `
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">

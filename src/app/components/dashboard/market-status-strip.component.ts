@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { computeMarketStatus } from '../../shared/market-hours.util';
 
 /**
@@ -9,6 +9,7 @@ import { computeMarketStatus } from '../../shared/market-hours.util';
 @Component({
   selector: 'pp-market-status-strip',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 text-xs
                 border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">

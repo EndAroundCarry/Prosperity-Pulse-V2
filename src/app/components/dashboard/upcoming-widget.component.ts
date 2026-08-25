@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { EarningsEvent, IpoEvent } from '../../models/instrument.model';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
 import { pickUpcoming } from '../../shared/dashboard.util';
@@ -9,6 +9,7 @@ import { pickUpcoming } from '../../shared/dashboard.util';
 @Component({
   selector: 'pp-upcoming-widget',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [WidgetCardComponent],
   template: `
     <pp-widget-card

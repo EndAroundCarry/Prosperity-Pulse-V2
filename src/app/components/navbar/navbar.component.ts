@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
@@ -10,13 +10,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
-import { AsyncPipe, CommonModule } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { ThemeService } from '../../core/theme.service';
 import { CommandPaletteComponent } from '../../shared/components/command-palette.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
     MatIconModule,
@@ -25,7 +26,6 @@ import { CommandPaletteComponent } from '../../shared/components/command-palette
     MatDividerModule,
     MatDialogModule,
     AsyncPipe,
-    CommonModule,
     RouterLink,
     RouterLinkActive,
     CommandPaletteComponent,
@@ -35,7 +35,7 @@ import { CommandPaletteComponent } from '../../shared/components/command-palette
 })
 export class NavbarComponent {
   readonly themeService = inject(ThemeService);
-  readonly darkMode = this.themeService.isDark();
+  readonly darkMode = this.themeService.isDark;
   private readonly dialog = inject(MatDialog);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);

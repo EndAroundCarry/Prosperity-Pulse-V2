@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { QuoteSnapshot } from '../../models/instrument.model';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
 import { SectorHeatmapComponent, SectorTile } from '../../shared/charts/sector-heatmap.component';
@@ -9,6 +9,7 @@ import { ThemeService } from '../../core/theme.service';
 @Component({
   selector: 'pp-sector-heatmap-widget',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [WidgetCardComponent, SectorHeatmapComponent],
   template: `
     <pp-widget-card

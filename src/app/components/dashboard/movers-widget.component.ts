@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { Mover } from '../../models/instrument.model';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
 import { formatSigned, directionArrow } from '../../shared/dashboard.util';
@@ -12,6 +12,7 @@ type MoversTab = 'gainers' | 'losers' | 'mostActive';
 @Component({
   selector: 'pp-movers-widget',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [WidgetCardComponent],
   template: `
     <pp-widget-card

@@ -1,13 +1,14 @@
 import {
   AfterViewInit,
   Component,
+  DestroyRef,
   ElementRef,
   OnDestroy,
   OnInit,
   ViewChild,
   inject,
 } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { DatePipe, NgOptimizedImage } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -37,14 +38,15 @@ import { UserPreferencesService } from '../../services/user-preferences.service'
 import { CommentService } from '../../services/comment.service';
 import { SeoService } from '../../services/seo.service';
 import { ArticleEngagementStats } from '../../models/comment.model';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-news-feed',
   standalone: true,
   imports: [
-    CommonModule,
     DatePipe,
+    NgOptimizedImage,
     RouterModule,
     FormsModule,
     MatCardModule,
@@ -68,6 +70,7 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   private readonly userPrefsService = inject(UserPreferencesService);
   private readonly commentService = inject(CommentService);
   private readonly seoService = inject(SeoService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private observer: IntersectionObserver | null = null;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -121,12 +124,18 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   ngOnInit(): void {
     this.updateFeedSeo();
 
-    this.newsService.getAllTopics().subscribe((topics) => {
+    this.newsService
+      .getAllTopics()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((topics) => {
       this.allTopics = topics;
     });
 
     // Subscribe to user preferences to get selected topics
-    this.userPrefsService.getPreferences().subscribe((prefs) => {
+    this.userPrefsService
+      .getPreferences()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((prefs) => {
       this.userPreferredTopics = prefs.selectedTopics;
     });
 

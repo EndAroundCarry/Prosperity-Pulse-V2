@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { QuoteSnapshot } from '../../models/instrument.model';
 import { QuoteTileComponent } from '../../shared/components/quote-tile.component';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
@@ -13,6 +13,7 @@ const INDEX_SYMBOLS = ['SPY', 'QQQ', 'DIA', 'IWM'];
 @Component({
   selector: 'pp-index-row-widget',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [QuoteTileComponent],
   template: `
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">

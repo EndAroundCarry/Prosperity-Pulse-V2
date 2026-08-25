@@ -1,16 +1,22 @@
 import { provideHttpClient } from '@angular/common/http';
-import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
-import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
-import { provideFirestore, getFirestore } from '@angular/fire/firestore';
+import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection, isDevMode } from '@angular/core';
+import { getApp, initializeApp, provideFirebaseApp } from '@angular/fire/app';
+import {
+  provideFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from '@angular/fire/firestore';
 import { getAuth, provideAuth } from '@angular/fire/auth';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideRouter, withDebugTracing } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { provideEchartsCore } from 'ngx-echarts';
 
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
 import { IngestionSchedulerService } from './core/ingestion/ingestion-scheduler.service';
 import { providePreferencesInitializer } from './services/user-preferences.service';
+import { provideServiceWorker } from '@angular/service-worker';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -25,7 +31,15 @@ export const appConfig: ApplicationConfig = {
       return initializeApp(environment.firebaseConfig);
     }),
     provideAuth(() => getAuth()),
-    provideFirestore(() => getFirestore()),
+    // IndexedDB-backed persistent cache (shared across tabs) so the dashboard
+    // can render from the last-synced Firestore data while offline — the PWA
+    // pairing the plan calls for. Falls back to memory-only automatically in
+    // environments without IndexedDB support.
+    provideFirestore(() =>
+      initializeFirestore(getApp(), {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      })
+    ),
     // Phase 3: lazy-loaded tree-shaken ECharts core (avoid ~1MB initial bundle).
     provideEchartsCore({ echarts: () => import('./shared/charts/echarts-core') }),
     // Phase 1: the in-client ingestion scheduler starts on bootstrap. It is
@@ -37,6 +51,9 @@ export const appConfig: ApplicationConfig = {
     }),
     // Phase 6: restore widget/topic preferences on app start (previously
     // only loaded from the profile page).
-    providePreferencesInitializer(),
+    providePreferencesInitializer(), provideServiceWorker('ngsw-worker.js', {
+            enabled: !isDevMode(),
+            registrationStrategy: 'registerWhenStable:30000'
+          }),
   ],
 };

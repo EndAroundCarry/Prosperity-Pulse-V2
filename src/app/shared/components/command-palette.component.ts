@@ -1,4 +1,5 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SymbolUniverseService, SymbolEntry } from '../../services/symbol-universe.service';
@@ -10,6 +11,7 @@ import { SymbolUniverseService, SymbolEntry } from '../../services/symbol-univer
 @Component({
   selector: 'pp-command-palette',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule],
   template: `
     @if (open()) {
@@ -56,6 +58,7 @@ import { SymbolUniverseService, SymbolEntry } from '../../services/symbol-univer
 export class CommandPaletteComponent {
   private readonly universe = inject(SymbolUniverseService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly open = signal(false);
   readonly term = signal('');
@@ -90,7 +93,10 @@ export class CommandPaletteComponent {
   onTerm(value: string): void {
     this.term.set(value);
     const seq = ++this.searchSeq;
-    this.universe.search(value).subscribe((rows) => {
+    this.universe
+      .search(value)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((rows) => {
       if (seq === this.searchSeq) this.results.set(rows);
     });
   }

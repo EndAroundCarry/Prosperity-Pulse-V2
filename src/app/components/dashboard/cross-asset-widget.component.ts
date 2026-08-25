@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { QuoteSnapshot } from '../../models/instrument.model';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
 import { asOfLabel, directionArrow, formatSigned } from '../../shared/dashboard.util';
@@ -12,6 +12,7 @@ const CROSS_ASSET_SYMBOLS = ['BTC', 'ETH', 'EURUSD', 'GLD', 'USO'];
 @Component({
   selector: 'pp-cross-asset-widget',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [WidgetCardComponent],
   template: `
     <pp-widget-card

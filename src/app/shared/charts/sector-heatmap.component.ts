@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { provideEchartsCore, NgxEchartsDirective } from 'ngx-echarts';
 import { ThemeService } from '../../core/theme.service';
 
@@ -15,13 +15,21 @@ export interface SectorTile {
 @Component({
   selector: 'pp-sector-heatmap',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgxEchartsDirective],
   providers: [provideEchartsCore({ echarts: () => import('./echarts-core') })],
-  template: `<div echarts [options]="options()" [theme]="themeService.mode()" class="block w-full h-[320px]"></div>`,
+  template: `<div echarts [options]="options()" [theme]="themeService.mode()" role="img" [attr.aria-label]="ariaLabel()" class="block w-full h-[320px]"></div>`,
 })
 export class SectorHeatmapComponent {
   readonly tiles = input<SectorTile[]>([]);
   readonly themeService = inject(ThemeService);
+
+  readonly ariaLabel = computed(() =>
+    'Sector performance heatmap: ' +
+    this.tiles()
+      .map((t) => `${t.symbol} ${t.changePercent >= 0 ? 'up' : 'down'} ${Math.abs(t.changePercent).toFixed(2)} percent`)
+      .join(', ')
+  );
 
   readonly options = computed(() => {
     const tiles = this.tiles();

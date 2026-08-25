@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { MacroSeries } from '../../models/instrument.model';
 import { WidgetCardComponent } from '../../shared/components/widget-card.component';
 import { YieldCurveComponent, YieldPoint } from '../../shared/charts/yield-curve.component';
@@ -10,6 +10,7 @@ import { YieldCurveComponent, YieldPoint } from '../../shared/charts/yield-curve
 @Component({
   selector: 'pp-rates-widget',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [WidgetCardComponent, YieldCurveComponent],
   template: `
     <pp-widget-card

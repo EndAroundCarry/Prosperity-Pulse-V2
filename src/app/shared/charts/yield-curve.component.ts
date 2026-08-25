@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { provideEchartsCore, NgxEchartsDirective } from 'ngx-echarts';
 import { ThemeService } from '../../core/theme.service';
 
@@ -14,9 +14,10 @@ export interface YieldPoint {
 @Component({
   selector: 'pp-yield-curve',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgxEchartsDirective],
   providers: [provideEchartsCore({ echarts: () => import('./echarts-core') })],
-  template: `<div echarts [options]="options()" [theme]="themeService.mode()" class="block w-full h-[240px]"></div>`,
+  template: `<div echarts [options]="options()" [theme]="themeService.mode()" role="img" [attr.aria-label]="'Treasury yield curve chart' + (inverted() ? ', curve is inverted' : '')" class="block w-full h-[240px]"></div>`,
 })
 export class YieldCurveComponent {
   readonly points = input<YieldPoint[]>([]);

@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Candle, FundamentalsDoc } from '../../models/instrument.model';
 
 /**
@@ -8,6 +8,7 @@ import { Candle, FundamentalsDoc } from '../../models/instrument.model';
 @Component({
   selector: 'pp-ticker-header',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   template: `
     <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">

@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MarketDataService } from '../../services/market-data.service';
 import { UserPreferencesService } from '../../services/user-preferences.service';
@@ -29,6 +29,7 @@ const WIDGET_IDS = [
 @Component({
   selector: 'pp-dashboard',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MarketStatusStripComponent,
     WatchlistStripComponent,
@@ -82,16 +83,24 @@ const WIDGET_IDS = [
           }
           @case ('sentiment') {
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <pp-sentiment-widget [articles]="news()" />
+              @defer (on viewport) {
+                <pp-sentiment-widget [articles]="news()" />
+              } @placeholder {
+                <div class="h-48 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse"></div>
+              }
               @if (showWidget('news')) {
                 <pp-news-rail-widget [articles]="news()" />
               }
             </div>
           }
           @case ('upcoming') {
-            <pp-upcoming-widget
-              [earnings]="earnings()?.events ?? []"
-              [ipos]="ipos()?.events ?? []" />
+            @defer (on viewport) {
+              <pp-upcoming-widget
+                [earnings]="earnings()?.events ?? []"
+                [ipos]="ipos()?.events ?? []" />
+            } @placeholder {
+              <div class="h-40 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse"></div>
+            }
           }
         }
       }

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map, switchMap } from 'rxjs';
@@ -6,6 +6,7 @@ import { Candle } from '../../models/instrument.model';
 import { MarketDataService } from '../../services/market-data.service';
 import { FetchQueueService } from '../../services/fetch-queue.service';
 import { WatchlistService } from '../../services/watchlist.service';
+import { SeoService } from '../../services/seo.service';
 import { TickerHeaderComponent } from './ticker-header.component';
 import { TickerStatsComponent } from './ticker-stats.component';
 import { PriceChartComponent } from '../../shared/charts/price-chart.component';
@@ -20,6 +21,7 @@ import { WidgetCardComponent } from '../../shared/components/widget-card.compone
 @Component({
   selector: 'pp-ticker-page',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TickerHeaderComponent, TickerStatsComponent, PriceChartComponent, NewsRailWidgetComponent, WidgetCardComponent],
   template: `
     <div class="mx-auto max-w-7xl space-y-4 p-4">
@@ -55,6 +57,7 @@ export class TickerPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly marketData = inject(MarketDataService);
   private readonly fetchQueue = inject(FetchQueueService);
+  private readonly seoService = inject(SeoService);
   readonly watchlist = inject(WatchlistService);
 
   /** Route param as a signal so in-place navigation re-reads everything. */
@@ -105,6 +108,20 @@ export class TickerPageComponent {
       if (!candles || candles.length === 0) {
         void this.fetchQueue.enqueue(sym).catch(() => undefined);
       }
+    });
+
+    // Per-ticker SEO metadata; picks up the company name once fundamentals load.
+    effect(() => {
+      const sym = this.symbol();
+      if (!sym) return;
+      const name = this.fundamentals()?.overview?.name;
+      const label = name ? `${name} (${sym})` : sym;
+      this.seoService.updateSeo({
+        title: `${label} Stock Price, Chart & Key Stats`,
+        description: `${label} end-of-day price chart, key stats, earnings history, and related news on Prosperity Pulse.`,
+        keywords: `${sym}, ${name ?? sym} stock, stock price, earnings, key stats`,
+        url: `/ticker/${sym}`,
+      });
     });
   }
 

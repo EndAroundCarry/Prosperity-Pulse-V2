@@ -1,9 +1,10 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /** Loading skeleton (replaces bare mat-spinners per the plan). */
 @Component({
   selector: 'pp-skeleton',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (variant() === 'tile') {
       <div class="animate-pulse space-y-2" aria-hidden="true">
