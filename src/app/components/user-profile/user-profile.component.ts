@@ -55,13 +55,18 @@ export class UserProfileComponent implements OnInit {
   userId: string = '';
 
   async ngOnInit(): Promise<void> {
+    // Private, per-user page: keep it out of the index entirely. It has no
+    // value in search results and its content differs per visitor.
     this.seoService.updateSeo({
       title: 'My News Preferences & Profile',
       description:
         'Manage your Prosperity Pulse topic preferences, personalize your financial news feed, and control your account settings.',
       keywords: 'profile settings, topic preferences, financial news personalization',
       url: '/profile',
+      robots: 'noindex',
     });
+    this.seoService.clearBreadcrumbs();
+    this.seoService.clearPageStructuredData();
     this.user$
       .pipe(takeUntilDestroyed())
       .subscribe(async (user) => {

@@ -165,5 +165,13 @@ export class AboutDataPageComponent implements OnInit {
       keywords: 'data sources, alpha vantage, end-of-day data, etf proxies, refresh cadence, financial data limitations',
       url: '/about-data',
     });
+    this.seoService.setBreadcrumbs([{ name: 'About our data', url: '/about-data' }]);
+    this.seoService.setPageStructuredData({
+      name: 'About our data',
+      description:
+        'Data sources, refresh cadence, and known limitations for every dataset shown on Prosperity Pulse.',
+      url: '/about-data',
+      type: 'AboutPage',
+    });
   }
 }

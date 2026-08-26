@@ -6,7 +6,7 @@ import { Candle } from '../../models/instrument.model';
 import { MarketDataService } from '../../services/market-data.service';
 import { FetchQueueService } from '../../services/fetch-queue.service';
 import { WatchlistService } from '../../services/watchlist.service';
-import { SeoService } from '../../services/seo.service';
+import { SeoService, SITE_URL } from '../../services/seo.service';
 import { TickerHeaderComponent } from './ticker-header.component';
 import { TickerStatsComponent } from './ticker-stats.component';
 import { PriceChartComponent } from '../../shared/charts/price-chart.component';
@@ -114,14 +114,49 @@ export class TickerPageComponent {
     effect(() => {
       const sym = this.symbol();
       if (!sym) return;
-      const name = this.fundamentals()?.overview?.name;
+
+      const overview = this.fundamentals()?.overview;
+      const name = overview?.name;
       const label = name ? `${name} (${sym})` : sym;
+      const hasData = (this.series()?.length ?? 0) > 0;
+
+      // Any of the ~11k listed US symbols resolves to a route here, but only
+      // the handful with cached data render anything substantial. Indexing the
+      // rest would flood the index with thin, near-identical pages and burn
+      // crawl budget, so a ticker only becomes indexable once it has data.
       this.seoService.updateSeo({
         title: `${label} Stock Price, Chart & Key Stats`,
-        description: `${label} end-of-day price chart, key stats, earnings history, and related news on Prosperity Pulse.`,
-        keywords: `${sym}, ${name ?? sym} stock, stock price, earnings, key stats`,
+        description: overview?.sector
+          ? `${label} — end-of-day price chart, market cap, P/E, EPS, 52-week range, earnings history, and related news. Sector: ${overview.sector}.`
+          : `${label} end-of-day price chart, key stats, earnings history, and related news on Prosperity Pulse.`,
+        keywords: `${sym}, ${name ?? sym} stock, ${sym} stock price, ${sym} earnings, ${sym} chart`,
         url: `/ticker/${sym}`,
+        robots: hasData ? 'index' : 'noindex',
       });
+
+      this.seoService.setBreadcrumbs([{ name: sym, url: `/ticker/${sym}` }]);
+
+      if (hasData) {
+        this.seoService.setPageStructuredData({
+          name: `${label} Stock Overview`,
+          description: `End-of-day price history, key statistics, and earnings for ${label}.`,
+          url: `/ticker/${sym}`,
+        });
+        this.seoService.setStructuredData(
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Corporation',
+            name: name || sym,
+            tickerSymbol: sym,
+            ...(overview?.description ? { description: overview.description } : {}),
+            ...(overview?.industry ? { industry: overview.industry } : {}),
+            url: `${SITE_URL}/ticker/${sym}`,
+          },
+          'json-ld-ticker'
+        );
+      } else {
+        this.seoService.clearPageStructuredData();
+      }
     });
   }
 

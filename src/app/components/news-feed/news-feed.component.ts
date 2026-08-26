@@ -174,6 +174,17 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
         url: '/news-feed',
       });
     }
+
+    // Filters are component state, not query params, so the canonical URL is
+    // always /news-feed regardless of the active filter.
+    this.seoService.setBreadcrumbs([{ name: 'News Feed', url: '/news-feed' }]);
+    this.seoService.setPageStructuredData({
+      name: 'Market News Feed',
+      description:
+        'Financial news aggregated from verified publishers, with per-article sentiment scoring, ticker relevance, and community discussion.',
+      url: '/news-feed',
+      type: 'CollectionPage',
+    });
   }
 
   ngAfterViewInit(): void {
@@ -354,12 +365,24 @@ export class NewsFeedComponent implements AfterViewInit, OnDestroy, OnInit {
   }
 
   openArticle(article: NewsArticle): void {
-    this.dialog.open(NewsDetailDialogComponent, {
+    const ref = this.dialog.open(NewsDetailDialogComponent, {
       data: article,
       maxWidth: '640px',
       width: '95vw',
       panelClass: 'news-detail-dialog',
     });
+
+    // The dialog rewrites the document title and meta tags to describe the
+    // article. Restore the feed's own SEO once it closes — via afterClosed so
+    // this also covers backdrop clicks and Esc, which bypass the dialog's
+    // close() handler.
+    ref
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.seoService.clearArticleStructuredData();
+        this.updateFeedSeo();
+      });
   }
 
   truncateSummary(text: string, maxLength = 120): string {

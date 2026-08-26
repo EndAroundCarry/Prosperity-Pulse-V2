@@ -81,6 +81,13 @@ export class MacroPageComponent implements OnInit {
       keywords: 'macro dashboard, CPI, inflation, unemployment rate, fed funds rate, GDP, treasury yields, yield curve',
       url: '/macro',
     });
+    this.seoService.setBreadcrumbs([{ name: 'Macro Dashboard', url: '/macro' }]);
+    this.seoService.setPageStructuredData({
+      name: 'US Macroeconomic Indicators',
+      description:
+        'CPI/inflation, unemployment, the federal funds rate, real GDP, retail sales, and the Treasury yield curve, each with the latest print, the prior print, and a plain-English explanation.',
+      url: '/macro',
+    });
   }
 
   readonly byId: Record<string, ReturnType<typeof toSignal<MacroSeries | null>>> = {

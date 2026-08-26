@@ -1,7 +1,11 @@
 User-agent: *
 Allow: /
-Allow: /news-feed
-Allow: /profile
 
-# Sitemap
+# Private, per-visitor page — no value in search results.
+Disallow: /profile
+
+# Ticker routes resolve for any of the ~11k listed US symbols, but only those
+# with cached data render meaningful content. Those pages carry their own
+# per-page robots meta tag, which is what actually decides indexability.
+
 Sitemap: https://prosperity-pulse.web.app/sitemap.xml

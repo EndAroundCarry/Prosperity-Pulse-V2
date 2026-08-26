@@ -12,7 +12,8 @@
   <meta name="keywords" content="finance news, stock market updates, cryptocurrency news, investing insights, macroeconomic trends, banking news, Wall Street analysis, real-time finance">
   <meta name="author" content="Prosperity Pulse">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-  <meta name="theme-color" content="#020617">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
 
   <!-- Open Graph / Facebook / LinkedIn -->
@@ -22,12 +23,18 @@
   <meta property="og:description" content="Curated financial stories, policy movements, and market shifts from verified publishers. Ranked by community engagement.">
   <meta property="og:site_name" content="Prosperity Pulse">
   <meta property="og:locale" content="en_US">
+  <meta property="og:image" content="https://prosperity-pulse.web.app/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Prosperity Pulse — see what's happening in finance at a glance">
 
   <!-- Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://prosperity-pulse.web.app/">
   <meta name="twitter:title" content="Prosperity Pulse | Real-Time Financial News &amp; Market Intelligence">
   <meta name="twitter:description" content="Curated financial stories, policy movements, and market shifts from verified publishers. Ranked by community engagement.">
+  <meta name="twitter:image" content="https://prosperity-pulse.web.app/og-image.png">
+  <meta name="twitter:image:alt" content="Prosperity Pulse — see what's happening in finance at a glance">
 
   <link rel="canonical" href="https://prosperity-pulse.web.app/">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -35,8 +42,12 @@
   <!-- Fonts & Icons Preconnect -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <!-- Firestore is on the critical path for every above-the-fold widget. -->
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin="">
+  <link rel="dns-prefetch" href="https://firestore.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- display=swap keeps icon glyphs from blocking first paint (CLS/LCP). -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons&amp;display=swap" rel="stylesheet">
 
   <!-- JSON-LD Structured Data for Search Engines -->
   <script type="application/ld+json">
@@ -50,8 +61,11 @@
         "url": "https://prosperity-pulse.web.app",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://prosperity-pulse.web.app/favicon.ico"
+          "url": "https://prosperity-pulse.web.app/icons/icon-512x512.png",
+          "width": 512,
+          "height": 512
         },
+        "image": "https://prosperity-pulse.web.app/og-image.png",
         "description": "Real-time financial news, macroeconomic analysis, and sector intelligence platform.",
         "sameAs": []
       },

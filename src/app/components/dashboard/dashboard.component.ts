@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MarketDataService } from '../../services/market-data.service';
 import { UserPreferencesService } from '../../services/user-preferences.service';
+import { SeoService } from '../../services/seo.service';
 import { asOfLabel, daysStale } from '../../shared/dashboard.util';
 import { MarketStatusStripComponent } from './market-status-strip.component';
 import { WatchlistStripComponent } from './watchlist-strip.component';
@@ -107,9 +108,32 @@ const WIDGET_IDS = [
     </div>
   `,
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   private readonly marketData = inject(MarketDataService);
   private readonly prefs = inject(UserPreferencesService);
+  private readonly seoService = inject(SeoService);
+
+  ngOnInit(): void {
+    // The landing page keeps the brand-first default title. Setting SEO here
+    // (rather than relying on the one-shot call in AppComponent) is also what
+    // resets tags when navigating back from /macro, /ticker, etc.
+    this.seoService.updateSeo({
+      description:
+        'A financial portal at a glance: US index and sector performance, top movers, crypto and FX, treasury yields, macro indicators, and market news with sentiment scoring. End-of-day market data.',
+      keywords:
+        'market dashboard, stock market today, sector performance, top gainers and losers, treasury yields, yield curve, CPI inflation, market sentiment, financial news',
+      url: '/',
+    });
+    this.seoService.setPageStructuredData({
+      name: 'Market Dashboard',
+      description:
+        'US indices, sector heatmap, top movers, cross-asset prices, treasury yields, macro indicators, and news sentiment in a single view.',
+      url: '/',
+      type: 'CollectionPage',
+    });
+    // Home is the breadcrumb root — drop any trail left by a previous route.
+    this.seoService.clearBreadcrumbs();
+  }
 
   private readonly snapshot = toSignal(this.marketData.getDashboardSnapshot(), { initialValue: null });
   private readonly moversDoc = toSignal(this.marketData.getMovers(), { initialValue: null });

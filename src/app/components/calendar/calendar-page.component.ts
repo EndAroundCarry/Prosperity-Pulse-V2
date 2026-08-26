@@ -114,6 +114,13 @@ export class CalendarPageComponent implements OnInit {
       keywords: 'earnings calendar, IPO calendar, upcoming earnings, earnings estimates, IPO price range',
       url: '/calendar',
     });
+    this.seoService.setBreadcrumbs([{ name: 'Calendar', url: '/calendar' }]);
+    this.seoService.setPageStructuredData({
+      name: 'Earnings & IPO Calendar',
+      description:
+        'Upcoming US earnings reports with consensus estimates, and upcoming IPOs with expected price ranges, over a three-month forward horizon.',
+      url: '/calendar',
+    });
   }
 
   private readonly earningsDoc = toSignal(this.marketData.getEarningsCalendar(), { initialValue: null });

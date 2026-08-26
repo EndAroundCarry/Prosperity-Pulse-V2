@@ -1,12 +1,17 @@
 {
-  "name": "Prosperity Pulse",
+  "id": "/",
+  "name": "Prosperity Pulse — Financial News & Market Intelligence",
   "short_name": "Prosperity Pulse",
   "description": "Finance news, market dashboard, tickers, watchlists, and macro indicators at a glance.",
-  "theme_color": "#111827",
-  "background_color": "#111827",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["finance", "news", "business"],
+  "theme_color": "#020617",
+  "background_color": "#020617",
   "display": "standalone",
-  "scope": "./",
-  "start_url": "./",
+  "orientation": "any",
+  "scope": "/",
+  "start_url": "/",
   "icons": [
     {
       "src": "icons/icon-72x72.png",

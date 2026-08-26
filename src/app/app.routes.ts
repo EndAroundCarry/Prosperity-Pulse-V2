@@ -35,7 +35,12 @@ export const routes: Routes = [
     path: 'about-data',
     loadComponent: () =>
       import('./components/about-data/about-data.component').then((m) => m.AboutDataPageComponent),
-    title: 'About Our Data | Prosperity Pulse',
   },
-  { path: '**', redirectTo: '' },
+  // A real 404 rather than `redirectTo: ''`, which produced soft 404s: every
+  // unknown URL returned the homepage with a 200 status.
+  {
+    path: '**',
+    loadComponent: () =>
+      import('./components/not-found/not-found.component').then((m) => m.NotFoundComponent),
+  },
 ];
